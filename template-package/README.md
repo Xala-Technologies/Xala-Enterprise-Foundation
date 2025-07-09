@@ -1,4 +1,4 @@
-# @xala-technologies/{{PACKAGE_NAME}}
+# Xala Enterprise - {{PACKAGE_NAME}}
 
 {{PACKAGE_DESCRIPTION}}
 
@@ -297,6 +297,44 @@ pnpm run typecheck
 3. Run compliance validation: `pnpm run compliance:full`
 4. Update documentation for any API changes
 5. Add Norwegian translations for new features
+
+## Implementation Plans
+
+This package includes comprehensive implementation plans for the entire Xala Enterprise ecosystem:
+
+```
+plans/
+├── 00-xala-ecosystem-master-implementation-plan.md    # Master architecture overview
+├── 01-foundation-package-implementation.md            # Core foundation services
+├── 02-authentication-package-implementation.md       # Multi-modal authentication
+├── 03-norwegian-services-package-implementation.md   # Government API integrations
+├── 04-security-compliance-package-implementation.md  # Security & compliance automation
+├── 05-ui-system-package-implementation.md            # Enterprise UI component library
+├── 06-data-services-package-implementation.md       # Multi-database support
+├── 07-business-services-package-implementation.md   # Domain-agnostic business logic
+├── 08-platform-services-package-implementation.md   # Infrastructure & external systems
+├── 09-monitoring-services-package-implementation.md # Observability & performance
+├── 10-document-services-package-implementation.md   # Document management & archival
+├── 11-test-infrastructure-package-implementation.md # Comprehensive testing framework
+└── 12-api-scaffolding-package-implementation.md     # Automated API generation
+```
+
+### Benefits
+
+- **📋 Complete Roadmap**: Understand how {{PACKAGE_NAME}} fits into the broader ecosystem
+- **🏗️ Architecture Guidance**: Implementation patterns and technical decisions
+- **🇳🇴 Norwegian Context**: Government compliance requirements and standards
+- **🔗 Dependencies**: Clear package relationships and integration points
+- **⚡ Best Practices**: Enterprise-proven patterns and approaches
+
+### Usage
+
+Review the relevant implementation plans before major development:
+
+1. **Start with Master Plan**: `00-xala-ecosystem-master-implementation-plan.md`
+2. **Review Current Package Plan**: `02-{{PACKAGE_NAME}}-package-implementation.md`
+3. **Check Dependencies**: Plans for packages you integrate with
+4. **Follow Patterns**: Consistent implementation across ecosystem
 
 ## License
 
