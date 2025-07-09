@@ -4,8 +4,8 @@
  */
 
 import {
-  FeatureToggleManager,
   FeatureFlag,
+  FeatureToggleManager,
   UserContext,
   createFeatureToggleManager,
 } from '../index';
@@ -36,7 +36,7 @@ describe('Feature Toggle User Stories', () => {
       },
       nsmClassification: 'ÅPEN',
       metadata: {
-        version: '2.1.0',
+        version: '2.0.0',
         environment: 'production',
       },
     };
