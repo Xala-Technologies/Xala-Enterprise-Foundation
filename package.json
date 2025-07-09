@@ -101,7 +101,7 @@
     "nsm:classification-check": "echo '🏛️ NSM Classification Check' && grep -r 'NSM_CLASSIFICATION\\|nsmClassification' src/ platforms/ || echo 'No NSM classifications found'",
     "nsm:security-scan": "echo '🔒 NSM Security Scan' && node dist/tools/cli/index.js audit --nsm --classification=BEGRENSET",
     "prepack": "pnpm run build:prod && pnpm run validate:build",
-    "prepare": "husky install",
+    "prepare": "command -v husky >/dev/null 2>&1 && husky install || echo 'Husky not available, skipping git hooks setup'",
     "release": "semantic-release",
     "security:scan": "echo '🔒 Security Scan' && npm audit --audit-level=moderate",
     "test": "jest --forceExit --maxWorkers=50%",
