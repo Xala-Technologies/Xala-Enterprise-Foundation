@@ -1,0 +1,38 @@
+# Development files
+*.log
+*.tmp
+.DS_Store
+.env*
+.vscode/
+.idea/
+.husky/
+
+# Test files
+coverage/
+*.test.ts
+*.test.js
+__tests__/
+*.stories.*
+
+# Build and development
+node_modules/
+.turbo/
+.cache/
+temp/
+
+# Documentation that shouldn't be in package
+docs/
+checklists/
+reports/
+
+# CRITICAL: Exclude full applications from npm package
+examples/municipal/
+examples/platforms/
+examples/international/
+examples/platform-testing/
+examples/norwegian-municipal/
+
+# Only include lightweight code snippets
+!examples/basic-usage/
+!examples/tutorials/
+!examples/README.md

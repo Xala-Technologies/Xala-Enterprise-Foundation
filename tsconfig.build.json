@@ -1,0 +1,65 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+
+    // Output configuration
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+
+    // Optimization settings - removed preserveConstEnums to fix isolatedModules warning
+    "removeComments": false,
+    "importHelpers": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Tree shaking and bundle optimization
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": false,
+    "preserveValueImports": false,
+
+    // Norwegian compliance and platform-specific types
+    "types": ["node", "jest"],
+
+    // Path mapping for multi-platform builds
+    "baseUrl": ".",
+    "paths": {
+      "@foundation/*": ["src/*"],
+      "@platforms/*": ["platforms/*"],
+      "@tools/*": ["tools/*"],
+      "@examples/*": ["examples/*"],
+      "@tests/*": ["tests/*"]
+    }
+  },
+  "include": ["src/**/*", "platforms/**/*", "tools/**/*", "tests/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**/*",
+    "examples/**/node_modules",
+    "examples/**/dist",
+    "scripts/**/*",
+    "*.config.js",
+    "*.config.ts"
+  ],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
+}

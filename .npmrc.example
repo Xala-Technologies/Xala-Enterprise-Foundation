@@ -1,0 +1,19 @@
+# Configure GitHub Packages for @xala-technologies packages
+# Copy this file to .npmrc and replace with your actual GitHub Personal Access Token
+
+@xala-technologies:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=your_github_personal_access_token_here
+
+# Default registry for other packages
+registry=https://registry.npmjs.org/
+
+# Ensure GitHub Packages are used for @xala-technologies scope
+//npm.pkg.github.com/:always-auth=true
+
+# Instructions:
+# 1. Copy this file: cp .npmrc.example .npmrc
+# 2. Replace 'your_github_personal_access_token_here' with your actual token
+# 3. Get your token from: https://github.com/settings/tokens
+# 4. Required permissions: packages:write, repo
+#
+# Example token format: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 

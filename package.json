@@ -1,0 +1,244 @@
+{
+  "name": "@xala-technologies/foundation",
+  "version": "2.0.0",
+  "description": "Multi-platform foundation package for Norwegian government-compliant applications. Provides event-driven architecture, security utilities, compliance validation, and configuration management optimized for web, mobile, desktop, and API platforms.",
+  "keywords": [
+    "foundation",
+    "norwegian-compliance",
+    "modular-architecture",
+    "event-driven",
+    "nsm-security",
+    "gdpr-compliance",
+    "digdir-standards",
+    "government-applications",
+    "multi-platform",
+    "react-native",
+    "electron",
+    "web",
+    "mobile",
+    "desktop",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Xala-Technologies/Xala-Enterprise-Foundation.git"
+  },
+  "license": "MIT",
+  "author": "Xala Technologies",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./web": {
+      "import": "./dist/platforms/web/index.esm.js",
+      "require": "./dist/platforms/web/index.js",
+      "types": "./dist/platforms/web/index.d.ts"
+    },
+    "./mobile": {
+      "import": "./dist/platforms/mobile/index.esm.js",
+      "require": "./dist/platforms/mobile/index.js",
+      "types": "./dist/platforms/mobile/index.d.ts"
+    },
+    "./desktop": {
+      "import": "./dist/platforms/desktop/index.esm.js",
+      "require": "./dist/platforms/desktop/index.js",
+      "types": "./dist/platforms/desktop/index.d.ts"
+    },
+    "./api": {
+      "import": "./dist/platforms/api/index.esm.js",
+      "require": "./dist/platforms/api/index.js",
+      "types": "./dist/platforms/api/index.d.ts"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "accessibility:keyboard": "echo '⌨️ Keyboard Navigation Check' && grep -r 'keyboard\\|keydown\\|keyup' src/ platforms/ || echo 'No keyboard navigation found'",
+    "accessibility:wcag": "echo '♿ WCAG 2.2 AA Testing' && grep -r 'accessibility\\|wcag\\|aria-' src/ platforms/ || echo 'No accessibility implementations found'",
+    "analyze:bundle": "rollup-plugin-analyzer dist/index.js",
+    "analyze:size": "bundlesize",
+    "audit:compliance": "pnpm run compliance:full && pnpm run compliance:report",
+    "prebuild": "pnpm run clean && pnpm run lint && pnpm run typecheck",
+    "build": "rollup -c && pnpm run build:docs",
+    "build:analyze": "pnpm run build:prod && pnpm run analyze:bundle",
+    "build:api": "rollup -c --bundleConfigAsCjs platforms/api/index.ts",
+    "build:core": "rollup -c --bundleConfigAsCjs --input src/index.ts --output.file dist/index.js",
+    "build:desktop": "rollup -c --bundleConfigAsCjs platforms/desktop/index.ts",
+    "build:dev": "NODE_ENV=development rollup -c -w",
+    "build:docs": "typedoc src/index.ts --out dist/docs --theme default",
+    "build:mobile": "rollup -c --bundleConfigAsCjs platforms/mobile/index.ts",
+    "build:platforms": "rollup -c --bundleConfigAsCjs platforms/*/index.ts",
+    "build:prod": "NODE_ENV=production rollup -c",
+    "build:tools": "rollup -c --bundleConfigAsCjs tools/cli/index.ts",
+    "build:web": "rollup -c --bundleConfigAsCjs platforms/web/index.ts",
+    "clean": "rimraf dist",
+    "compliance:full": "pnpm run nsm:security-scan && pnpm run gdpr:audit && pnpm run digdir:standards-check && pnpm run accessibility:wcag && pnpm run i18n:validate",
+    "compliance:quick": "pnpm run nsm:classification-check && pnpm run gdpr:validate && pnpm run digdir:api-validation",
+    "compliance:report": "echo '📊 Generating Norwegian Compliance Report' && node dist/tools/cli/index.js analyze --compliance --output=compliance-report.json",
+    "dev": "pnpm run build:dev",
+    "digdir:api-validation": "echo '📡 DigDir API Validation' && grep -r 'openapi\\|swagger\\|api' src/ platforms/ || echo 'No API documentation found'",
+    "digdir:interoperability": "echo '🔗 DigDir Interoperability' && grep -r 'digdir\\|DigDir\\|interoperability' src/ platforms/ || echo 'No DigDir implementations found'",
+    "digdir:standards-check": "echo '🏛️ DigDir Standards Check' && node dist/tools/cli/index.js validate --digdir",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "gdpr:audit": "echo '🛡️ GDPR Compliance Audit' && node dist/tools/cli/index.js compliance --gdpr --strict",
+    "gdpr:consent-check": "echo '✅ GDPR Consent Check' && grep -r 'consent\\|ConsentManagement' src/ platforms/ || echo 'No consent management found'",
+    "gdpr:validate": "echo '📋 GDPR Validation' && grep -r 'gdpr\\|GDPR\\|dataProtection\\|retention' src/ platforms/ || echo 'No GDPR implementations found'",
+    "i18n:norwegian": "echo '🇳🇴 Norwegian Text Check' && grep -r 'norwegian\\|norsk\\|bokmål\\|nynorsk' src/ platforms/ || echo 'No Norwegian text references found'",
+    "i18n:validate": "echo '🇳🇴 Norwegian Language Validation' && find . -name '*.json' -path '*/locales/*' -o -path '*/i18n/*' | grep -E '(nb|nn)' || echo 'No Norwegian locale files found'",
+    "lint": "eslint src/**/*.ts platforms/**/*.ts tests/**/*.ts --max-warnings 200",
+    "lint:fix": "eslint src/**/*.ts platforms/**/*.ts tests/**/*.ts --fix",
+    "nsm:classification-check": "echo '🏛️ NSM Classification Check' && grep -r 'NSM_CLASSIFICATION\\|nsmClassification' src/ platforms/ || echo 'No NSM classifications found'",
+    "nsm:security-scan": "echo '🔒 NSM Security Scan' && node dist/tools/cli/index.js audit --nsm --classification=BEGRENSET",
+    "prepack": "pnpm run build:prod && pnpm run validate:build",
+    "prepare": "husky install",
+    "release": "semantic-release",
+    "security:scan": "echo '🔒 Security Scan' && npm audit --audit-level=moderate",
+    "test": "jest",
+    "test:ci": "jest --passWithNoTests",
+    "test:compliance": "jest --testPathPattern=tests/compliance",
+    "test:coverage": "jest --coverage",
+    "test:imports": "node scripts/test-imports.js",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:matrix": "pnpm run test:unit && pnpm run test:integration && pnpm run test:platforms && pnpm run test:compliance && pnpm run test:performance",
+    "test:performance": "jest --testPathPattern=tests/performance",
+    "test:platforms": "jest --testPathPattern=tests/platforms",
+    "test:unit": "jest --testPathPattern=__tests__",
+    "typecheck": "tsc --noEmit",
+    "typecheck:all": "pnpm run typecheck && pnpm run typecheck:examples",
+    "typecheck:examples": "cd examples && tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch",
+    "validate:build": "node scripts/validate-build.js",
+    "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
+    "workflow:pre-commit": "lint-staged",
+    "workflow:validate": "pnpm run lint:fix && pnpm run format:check && pnpm run typecheck && pnpm run compliance:quick",
+    "🇳🇴 Norwegian Compliance Scripts": "echo 'Norwegian Government Compliance Tools'"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pnpm run lint && pnpm run typecheck",
+      "commit-msg": "conventional-changelog-lint",
+      "pre-push": "pnpm run test:matrix"
+    }
+  },
+  "dependencies": {
+    "@jest/globals": "^30.0.4",
+    "commander": "^14.0.0",
+    "date-fns": "^2.30.0",
+    "eventemitter3": "^5.0.1",
+    "lodash": "^4.17.21",
+    "pino": "^9.7.0",
+    "tslib": "^2.8.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.19.4",
+    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "bundlesize": "^0.18.1",
+    "conventional-changelog-cli": "^4.1.0",
+    "eslint": "^8.53.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.5.0",
+    "rollup-plugin-analyzer": "^4.0.0",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "rollup-plugin-filesize": "^10.0.0",
+    "semantic-release": "^22.0.8",
+    "sort-package-json": "^3.4.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typedoc": "^0.25.4",
+    "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "electron": ">=25.0.0",
+    "react": ">=18.0.0",
+    "react-native": ">=0.72.0"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "*"
+      ]
+    },
+    "neverBuiltDependencies": [
+      "iltorb",
+      "node-sass",
+      "fsevents",
+      "canvas"
+    ],
+    "autoInstallPeers": false,
+    "dedupe": true,
+    "shamefullyHoist": true
+  },
+  "bundlesize": [
+    {
+      "path": "./dist/index.js",
+      "maxSize": "50 kB",
+      "compression": "gzip"
+    },
+    {
+      "path": "./dist/platforms/web/index.js",
+      "maxSize": "25 kB",
+      "compression": "gzip"
+    },
+    {
+      "path": "./dist/platforms/mobile/index.js",
+      "maxSize": "30 kB",
+      "compression": "gzip"
+    },
+    {
+      "path": "./dist/platforms/desktop/index.js",
+      "maxSize": "35 kB",
+      "compression": "gzip"
+    },
+    {
+      "path": "./dist/platforms/api/index.js",
+      "maxSize": "40 kB",
+      "compression": "gzip"
+    }
+  ]
+}

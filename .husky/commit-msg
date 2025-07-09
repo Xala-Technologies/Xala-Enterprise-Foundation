@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validate commit message format
+npx commitlint --config commitlint.config.cjs --edit $1
+
+# Check for Norwegian compliance keywords
+node scripts/validate-commit-message.cjs $1

@@ -1,0 +1,77 @@
+name: 'Xala Enterprise Package Template'
+description: 'Template for creating Norwegian-compliant enterprise packages in the Xala ecosystem'
+
+# Template variables that will be replaced when creating new repositories
+variables:
+  package_name:
+    description: 'Package name (e.g., authentication, business-services)'
+    type: string
+    required: true
+
+  package_display_name:
+    description: 'Display name for the package (e.g., Authentication, Business Services)'
+    type: string
+    required: true
+
+  package_description:
+    description: 'Brief description of the package functionality (minimum 50 characters)'
+    type: string
+    required: true
+
+  github_org:
+    description: 'GitHub organization name'
+    type: string
+    default: 'Xala-Technologies'
+
+  include_platforms:
+    description: 'Include platform-specific implementations'
+    type: boolean
+    default: true
+
+  nsm_classification:
+    description: 'Default NSM security classification'
+    type: choice
+    options:
+      - 'ÅPEN'
+      - 'BEGRENSET'
+      - 'KONFIDENSIELT'
+      - 'HEMMELIG'
+    default: 'BEGRENSET'
+
+# Files to be processed and customized
+files:
+  - 'package.json'
+  - 'README.md'
+  - 'src/index.ts'
+  - '.github/workflows/*.yml'
+  - 'platforms/*/index.ts'
+  - 'docs/**/*.md'
+  - 'tests/**/*.ts'
+
+# Directories to create
+directories:
+  - 'src'
+  - 'platforms/web'
+  - 'platforms/mobile'
+  - 'platforms/desktop'
+  - 'platforms/api'
+  - 'tests/compliance'
+  - 'tests/integration'
+  - 'tests/performance'
+  - 'docs/compliance'
+  - 'scripts'
+  - 'tools/cli'
+
+# Post-creation instructions
+instructions: |
+  After creating your repository from this template:
+
+  1. Replace all instances of {{PACKAGE_NAME}} with your package name
+  2. Replace all instances of {{PACKAGE_DISPLAY_NAME}} with your display name
+  3. Replace all instances of {{PACKAGE_DESCRIPTION}} with your description
+  4. Update the repository URL in package.json
+  5. Customize the package-specific functionality in src/
+  6. Run `pnpm install` to install dependencies
+  7. Run `pnpm run workflow:validate` to ensure everything is set up correctly
+  8. Update docs/README.md with package-specific documentation
+  9. Implement Norwegian compliance features specific to your package domain

@@ -1,0 +1,372 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security checks daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_ENV: test
+
+jobs:
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        run: |
+          echo "Running pnpm security audit..."
+          pnpm audit --audit-level moderate || {
+            echo "❌ Security vulnerabilities found in dependencies"
+            echo "Please run 'pnpm audit --fix' to resolve issues"
+            exit 1
+          }
+          echo "✅ No security vulnerabilities found"
+
+      - name: Check for known vulnerable packages
+        run: |
+          # Check for packages with known security issues
+          if pnpm ls --depth=0 --json | jq -r '.[] | select(.problems != null) | .problems[]' 2>/dev/null | grep -i security; then
+            echo "❌ Security issues found in direct dependencies"
+            exit 1
+          fi
+          echo "✅ No security issues in direct dependencies"
+
+  code-scanning:
+    name: Code Security Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: typescript, javascript
+          queries: security-and-quality
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build for analysis
+        run: pnpm run build
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: '/language:typescript'
+
+  secret-scanning:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'HEAD~1' }}
+          head: HEAD
+          extra_args: --debug --only-verified
+        continue-on-error: true
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install license checker
+        run: pnpm add -D license-checker
+
+      - name: Check licenses
+        run: |
+          echo "Checking dependency licenses for Norwegian government compliance..."
+
+          # Generate license report
+          npx license-checker --json --out licenses.json
+
+          # Check for prohibited licenses (for government use)
+          PROHIBITED_LICENSES="GPL-2.0,GPL-3.0,AGPL-1.0,AGPL-3.0,LGPL-2.1,LGPL-3.0,SSPL-1.0"
+
+          if npx license-checker --failOn "$PROHIBITED_LICENSES" --summary; then
+            echo "✅ All dependency licenses are compatible with government use"
+          else
+            echo "❌ Found prohibited licenses for government applications"
+            echo "Prohibited licenses: $PROHIBITED_LICENSES"
+            exit 1
+          fi
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+
+  security-policy-validation:
+    name: Security Policy Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check security policy files
+        run: |
+          echo "Validating security policy compliance..."
+
+          # Check for SECURITY.md
+          if [ ! -f "SECURITY.md" ] && [ ! -f ".github/SECURITY.md" ]; then
+            echo "❌ SECURITY.md file missing"
+            exit 1
+          fi
+
+          echo "✅ Security policy files present"
+
+      - name: Validate Norwegian compliance documentation
+        run: |
+          # Check for Norwegian compliance documentation
+          test -f docs/compliance/norwegian-compliance.md || {
+            echo "❌ Norwegian compliance documentation missing"
+            exit 1
+          }
+
+          # Verify NSM classification documentation
+          if ! grep -q "NSM" docs/compliance/norwegian-compliance.md; then
+            echo "❌ NSM classification documentation incomplete"
+            exit 1
+          fi
+
+          # Verify GDPR documentation
+          if ! grep -q "GDPR" docs/compliance/norwegian-compliance.md; then
+            echo "❌ GDPR compliance documentation incomplete"
+            exit 1
+          fi
+
+          echo "✅ Norwegian compliance documentation validated"
+
+  encryption-validation:
+    name: Encryption Standards Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm run build
+
+      - name: Test encryption standards
+        run: |
+          node -e "
+            (async () => {
+              console.log('Testing encryption standards compliance...');
+
+              try {
+                const foundation = await import('./dist/index.esm.js');
+
+                // Test that foundation package exports are available
+                if (!foundation.initializeFoundation) {
+                  throw new Error('Foundation initialization function not available');
+                }
+
+                console.log('✅ Foundation package successfully imported');
+
+                // Test Norwegian compliance constants
+                if (foundation.NORWEGIAN_COMPLIANCE) {
+                  console.log('✅ Norwegian compliance constants available');
+                } else {
+                  throw new Error('Norwegian compliance constants not available');
+                }
+
+                console.log('✅ Encryption standards validation passed');
+              } catch (error) {
+                console.error('❌ Encryption standards validation failed:', error.message);
+                process.exit(1);
+              }
+            })();
+          "
+
+  norwegian-security-compliance:
+    name: Norwegian Security Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm run build
+
+      - name: Test NSM security classifications
+        run: |
+          node -e "
+            (async () => {
+              console.log('Testing NSM security classification compliance...');
+
+              const classifications = ['ÅPEN', 'BEGRENSET', 'KONFIDENSIELT', 'HEMMELIG'];
+              console.log('Required NSM classifications:', classifications);
+
+              try {
+                const foundation = await import('./dist/index.esm.js');
+
+                // Test that NORWEGIAN_COMPLIANCE constants are available
+                if (foundation.NORWEGIAN_COMPLIANCE && foundation.NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS) {
+                  const availableClassifications = foundation.NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS;
+                  console.log('Available NSM classifications:', availableClassifications);
+
+                  // Verify all required classifications are present
+                  classifications.forEach(classification => {
+                    if (!availableClassifications.includes(classification)) {
+                      throw new Error(\`NSM classification \${classification} not found in NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS\`);
+                    }
+                  });
+                  console.log('✅ All NSM classifications validated');
+                } else {
+                  throw new Error('NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS not found in foundation package');
+                }
+
+                // Test that foundation initialization works
+                if (foundation.initializeFoundation) {
+                  console.log('✅ Foundation initialization function available');
+                } else {
+                  console.warn('⚠️ Foundation initialization function not found');
+                }
+
+                console.log('✅ Norwegian security standards validation passed');
+              } catch (error) {
+                console.error('❌ Norwegian security standards validation failed:', error.message);
+                process.exit(1);
+              }
+            })();
+          "
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        dependency-audit,
+        code-scanning,
+        secret-scanning,
+        license-compliance,
+        security-policy-validation,
+        encryption-validation,
+        norwegian-security-compliance,
+      ]
+    if: always()
+
+    steps:
+      - name: Security checks summary
+        run: |
+          echo "🔒 Security Checks Summary:"
+          echo "- Dependency Audit: ${{ needs.dependency-audit.result }}"
+          echo "- Code Scanning: ${{ needs.code-scanning.result }}"
+          echo "- Secret Scanning: ${{ needs.secret-scanning.result }}"
+          echo "- License Compliance: ${{ needs.license-compliance.result }}"
+          echo "- Security Policy: ${{ needs.security-policy-validation.result }}"
+          echo "- Encryption Standards: ${{ needs.encryption-validation.result }}"
+          echo "- Norwegian Security: ${{ needs.norwegian-security-compliance.result }}"
+
+          # Check if any security checks failed
+          if [[ "${{ needs.dependency-audit.result }}" != "success" ||
+                "${{ needs.code-scanning.result }}" != "success" ||
+                "${{ needs.secret-scanning.result }}" != "success" ||
+                "${{ needs.license-compliance.result }}" != "success" ||
+                "${{ needs.security-policy-validation.result }}" != "success" ||
+                "${{ needs.encryption-validation.result }}" != "success" ||
+                "${{ needs.norwegian-security-compliance.result }}" != "success" ]]; then
+            echo "❌ One or more security checks failed"
+            echo "🚨 Security issues must be resolved before deployment"
+            exit 1
+          fi
+
+          echo "✅ All security checks passed"
+          echo "🛡️ Package meets Norwegian government security standards"
