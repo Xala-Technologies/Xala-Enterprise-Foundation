@@ -142,33 +142,27 @@ create_package() {
         rm -rf "${repo_dir}"
     fi
 
-    # Delete existing repository if it exists to force recreate with latest template
-    if gh repo view "${GITHUB_ORG}/${repo_name}" &> /dev/null; then
-        echo "   🗑️ Deleting existing repository to force recreate..."
-        gh repo delete "${GITHUB_ORG}/${repo_name}" --yes 2>/dev/null || true
-        echo "   ⏳ Waiting for deletion to complete..."
-        sleep 5
-        echo "   ✅ Existing repository deleted"
-    fi
+    # Create package directory and copy template files
+    echo "   📁 Creating package directory and copying template files..."
+    mkdir -p "${repo_dir}"
 
-    # Always create repository from template to ensure latest fixes
-    echo "   🔧 Creating repository from template..."
-    gh repo create "${GITHUB_ORG}/${repo_name}" \
-        --template="${GITHUB_ORG}/${TEMPLATE_REPO}" \
-        --description="${description}" \
-        --public \
-        --clone
-
-    # Move to package directory
-    if [ -d "${repo_name}" ]; then
-        mv "${repo_name}" "${repo_dir}"
+    # Copy template files from local template-package directory
+    if [ -d "../template-package" ]; then
+        cp -r ../template-package/* "${repo_dir}/"
         cd "${repo_dir}"
+        echo "   ✅ Template files copied from local template-package"
     else
-        echo "   ❌ Failed to create repository: ${repo_name}"
+        echo "   ❌ Template package directory not found: ../template-package"
+        echo "   💡 Please ensure you're running this script from the correct directory"
         return 1
     fi
 
-    # Replace template variables in files from GitHub template
+    # Initialize git repository
+    echo "   🔧 Initializing git repository..."
+    git init
+    git remote add origin "https://github.com/${GITHUB_ORG}/${repo_name}.git"
+
+    # Replace template variables in files from local template
     echo "   🔄 Replacing template variables in template files..."
 
     # Convert display name to PascalCase for proper naming
@@ -183,22 +177,57 @@ create_package() {
     echo "      {{GITHUB_ORG}} → ${GITHUB_ORG}"
     echo "      {{NSM_CLASSIFICATION}} → ${nsm_classification}"
 
-    # Use find and sed to replace template variables
+    # Use a more robust replacement method with proper escaping
     find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" -o -name ".*" \) ! -path "./node_modules/*" ! -path "./.git/*" -print0 | while IFS= read -r -d '' file; do
         # Check if file contains template variables before processing
         if grep -q "{{" "$file" 2>/dev/null; then
             echo "   🔄 Processing: $file"
-            # Create backup and replace variables
-            sed -i.bak \
-                -e "s/{{PACKAGE_NAME}}/${package_name_kebab}/g" \
-                -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
-                -e "s|{{PACKAGE_DESCRIPTION}}|${description}|g" \
-                -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
-                -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
-                "$file" 2>/dev/null || true
 
-            # Remove backup file
-            rm -f "$file.bak" 2>/dev/null || true
+            # Create a temporary file for safe replacement
+            temp_file=$(mktemp)
+
+            # Use Python for more robust string replacement to handle special characters
+            python3 -c "
+import sys
+import re
+
+# Read the file
+with open('$file', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Replace template variables
+content = content.replace('{{PACKAGE_NAME}}', '$package_name_kebab')
+content = content.replace('{{PACKAGE_DISPLAY_NAME}}', '$display_name_pascal')
+content = content.replace('{{PACKAGE_DESCRIPTION}}', '''$description''')
+content = content.replace('{{GITHUB_ORG}}', '$GITHUB_ORG')
+content = content.replace('{{NSM_CLASSIFICATION}}', '$nsm_classification')
+
+# Write to temp file
+with open('$temp_file', 'w', encoding='utf-8') as f:
+    f.write(content)
+" 2>/dev/null || {
+                # Fallback to sed if Python fails
+                cp "$file" "$temp_file"
+                # Escape special characters for sed
+                escaped_description=$(printf '%s\n' "$description" | sed 's/[[\.*^$()+?{|]/\\&/g')
+
+                sed -i.bak \
+                    -e "s/{{PACKAGE_NAME}}/${package_name_kebab}/g" \
+                    -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
+                    -e "s|{{PACKAGE_DESCRIPTION}}|${escaped_description}|g" \
+                    -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
+                    -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
+                    "$temp_file" 2>/dev/null || true
+
+                # Remove backup file
+                rm -f "${temp_file}.bak" 2>/dev/null || true
+            }
+
+            # Move the temp file to replace the original
+            mv "$temp_file" "$file" 2>/dev/null || {
+                echo "   ⚠️ Failed to replace $file, skipping..."
+                rm -f "$temp_file" 2>/dev/null || true
+            }
         fi
     done
 
@@ -298,9 +327,22 @@ create_package() {
         git rm --cached yarn.lock 2>/dev/null || true
     fi
 
+    # Create GitHub repository
+    echo "   🔧 Creating GitHub repository..."
+    if gh repo view "${GITHUB_ORG}/${repo_name}" &> /dev/null; then
+        echo "   ⚠️ Repository ${repo_name} already exists, skipping creation"
+    else
+        gh repo create "${GITHUB_ORG}/${repo_name}" \
+            --description="${description}" \
+            --public \
+            --confirm 2>/dev/null || {
+            echo "   ⚠️ Failed to create GitHub repository, but continuing with local setup"
+        }
+    fi
+
     # Commit changes (if there are any)
     if git status --porcelain | grep -q .; then
-        echo "   💾 Creating commit with updated template..."
+        echo "   💾 Creating initial commit..."
         git add .
         # Make sure lock files are not added even if they exist
         git reset HEAD pnpm-lock.yaml 2>/dev/null || true
@@ -308,12 +350,12 @@ create_package() {
         git reset HEAD yarn.lock 2>/dev/null || true
 
         # Create commit with shorter message to avoid commitlint issues
-        git commit -m "feat: update ${package_name} package with latest template
+        git commit -m "feat: initialize ${package_name} package
 
 - NSM Classification: ${nsm_classification}
 - Norwegian compliance enabled
 - Multi-platform support (web, mobile, desktop, API)
-- Updated template with fixed TypeScript imports and ESLint config
+- Template with TypeScript, ESLint, and Jest setup
 
 ${description}" 2>&1 | tee /tmp/commit_output.log
 
@@ -326,24 +368,24 @@ ${description}" 2>&1 | tee /tmp/commit_output.log
             return 1
         fi
 
-        echo "   🚀 Pushing to remote repository..."
-        echo "   ℹ️ Lock files excluded from git to prevent push issues"
+        # Set up main branch and push
+        echo "   🚀 Setting up main branch and pushing to remote repository..."
+        git branch -M main
 
-        # Use git push with timeout and better error handling
-        timeout 300 git push origin main --progress 2>&1 | tee /tmp/push_output.log
-        push_result=$?
-
-        if [ $push_result -eq 0 ]; then
-            echo "   ✅ Push completed successfully"
-        elif [ $push_result -eq 124 ]; then
-            echo "   ⏱️ Push timed out after 5 minutes"
-            echo "   💡 This might be due to large files or network issues"
-            echo "   🔧 Try manually: cd ${repo_dir} && git push origin main"
+        # Try to push with better error handling
+        if timeout 300 git push -u origin main --progress 2>&1 | tee /tmp/push_output.log; then
+            echo "   ✅ Repository created and pushed successfully"
         else
-            echo "   ⚠️ Push failed with exit code: $push_result"
-            echo "   📋 Push output:"
-            tail -10 /tmp/push_output.log
-            echo "   💡 You can manually push later with: git push origin main"
+            push_result=$?
+            if [ $push_result -eq 124 ]; then
+                echo "   ⏱️ Push timed out after 5 minutes"
+                echo "   💡 This might be due to large files or network issues"
+            else
+                echo "   ⚠️ Push failed with exit code: $push_result"
+                echo "   📋 Push output:"
+                tail -10 /tmp/push_output.log
+            fi
+            echo "   🔧 You can manually push later with: cd ${repo_dir} && git push -u origin main"
         fi
     else
         echo "   ✅ No changes to commit"

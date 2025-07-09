@@ -2,71 +2,114 @@
   "name": "@xala-technologies/{{PACKAGE_NAME}}",
   "version": "1.0.0",
   "description": "{{PACKAGE_DESCRIPTION}}",
-  "keywords": [
-    "{{PACKAGE_NAME}}",
-    "norwegian-compliance",
-    "nsm-security",
-    "gdpr-compliance",
-    "multi-platform",
-    "xala-enterprise"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}.git"
-  },
-  "license": "MIT",
-  "author": "Xala Technologies",
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "package.json",
     "README.md",
-    "LICENSE"
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "clean": "rimraf dist",
-    "dev": "rollup -c -w",
-    "lint": "eslint src/**/*.ts --max-warnings 0",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "test": "jest --forceExit --detectOpenHandles",
-    "test:ci": "jest --passWithNoTests --forceExit --detectOpenHandles --testTimeout=10000 --maxWorkers=50%",
-    "test:coverage": "jest --coverage --forceExit --detectOpenHandles --testTimeout=10000 --maxWorkers=50%",
-    "test:watch": "jest --watch --forceExit --detectOpenHandles",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --passWithNoTests",
+    "test:compliance": "jest --testNamePattern='compliance|norwegian|gdpr'",
+    "test:accessibility": "jest --testNamePattern='accessibility|a11y|wcag'",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "lint:check": "eslint . --ext .ts,.tsx,.js,.jsx",
     "typecheck": "tsc --noEmit",
-    "validate:local": "bash scripts/validate-local.sh",
-    "validate:quick": "bash scripts/quick-test.sh",
-    "validate:ci": "bash scripts/simulate-ci.sh",
-    "install:hooks": "bash scripts/install-hooks.sh"
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:ci",
+    "compliance:quick": "node scripts/norwegian-compliance-check.js",
+    "compliance:full": "node scripts/full-compliance-validation.js",
+    "security:audit": "npm audit --audit-level=moderate",
+    "validate": "npm run lint && npm run typecheck && npm run test:ci && npm run compliance:quick"
   },
-  "dependencies": {
-    "@xala-technologies/foundation": "^2.0.0"
+  "keywords": [
+    "xala",
+    "norwegian",
+    "government",
+    "compliance",
+    "{{NSM_CLASSIFICATION}}",
+    "gdpr",
+    "accessibility",
+    "enterprise",
+    "{{PACKAGE_NAME}}",
+    "{{PACKAGE_DISPLAY_NAME}}"
+  ],
+  "author": {
+    "name": "Xala Technologies",
+    "email": "support@xalatechnologies.com",
+    "url": "https://xalatechnologies.com"
   },
-  "devDependencies": {
-    "@rollup/plugin-typescript": "^11.1.5",
-    "@types/jest": "^29.5.8",
-    "@types/node": "^20.19.4",
-    "@typescript-eslint/eslint-plugin": "^6.11.0",
-    "@typescript-eslint/parser": "^6.11.0",
-    "eslint": "^8.53.0",
-    "jest": "^29.7.0",
-    "rimraf": "^5.0.5",
-    "rollup": "^4.5.0",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/{{GITHUB_ORG}}/{{PACKAGE_NAME}}#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/{{GITHUB_ORG}}/{{PACKAGE_NAME}}.git"
   },
-  "packageManager": "pnpm@9.15.9",
+  "bugs": {
+    "url": "https://github.com/{{GITHUB_ORG}}/{{PACKAGE_NAME}}/issues"
+  },
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@xala-technologies/foundation": "^1.0.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.19.4",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.53.0",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.1",
+    "tsup": "^8.0.1",
+    "typescript": "^5.4.2"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "xala": {
+    "packageType": "{{PACKAGE_NAME}}",
+    "displayName": "{{PACKAGE_DISPLAY_NAME}}",
+    "nsmClassification": "{{NSM_CLASSIFICATION}}",
+    "norwegianCompliance": true,
+    "gdprCompliant": true,
+    "accessibilityCompliant": true,
+    "platforms": [
+      "web",
+      "mobile",
+      "desktop",
+      "api"
+    ],
+    "languages": [
+      "nb",
+      "nn",
+      "en"
+    ]
   }
 }
