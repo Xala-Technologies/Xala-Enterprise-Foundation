@@ -145,3 +145,4 @@ audit-report.json
 package-lock.json
 yarn.lock
 .cursor-updates
+test-package
