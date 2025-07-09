@@ -66,9 +66,10 @@ export async function migrateFoundation(options: MigrateOptions): Promise<Migrat
 
     return result;
   } catch (error) {
-    logger.error('Foundation migration failed', {
-      error: error instanceof Error ? error.message : error,
-    });
+    logger.error(
+      'Foundation migration failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }
@@ -142,7 +143,10 @@ async function analyzeProject(): Promise<ProjectAnalysis> {
       else analysis.framework = 'custom';
     }
   } catch (error) {
-    logger.error('Project analysis failed', { error });
+    logger.error(
+      'Project analysis failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 
   return analysis;
@@ -265,7 +269,10 @@ async function createBackup(): Promise<string> {
     logger.info('Backup created', { backupDir });
     return backupDir;
   } catch (error) {
-    logger.error('Backup creation failed', { error });
+    logger.error(
+      'Backup creation failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw new Error(`Failed to create backup: ${error}`);
   }
 }
@@ -287,7 +294,10 @@ async function executeMigration(result: MigrateResult, options: MigrateOptions):
     // 4. Update imports
     await updateImports(result, options);
   } catch (error) {
-    logger.error('Migration execution failed', { error });
+    logger.error(
+      'Migration execution failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }
@@ -341,7 +351,10 @@ async function installFoundation(result: MigrateResult, options: MigrateOptions)
     await fs.writeFile(packagePath, JSON.stringify(pkg, null, 2));
     result.dependenciesUpdated++;
   } catch (error) {
-    logger.error('Foundation installation failed', { error });
+    logger.error(
+      'Foundation installation failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }
@@ -396,7 +409,10 @@ async function createConfiguration(result: MigrateResult, options: MigrateOption
     result.filesModified++;
     logger.info('Foundation configuration created', { configPath });
   } catch (error) {
-    logger.error('Configuration creation failed', { error });
+    logger.error(
+      'Configuration creation failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }
@@ -451,7 +467,10 @@ async function migrateImplementations(
       }
     }
   } catch (error) {
-    logger.error('Implementation migration failed', { error });
+    logger.error(
+      'Implementation migration failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 

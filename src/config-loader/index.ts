@@ -98,6 +98,16 @@ export const getSecurityConfig = () => ({
     mfaRequired: true,
     sessionTimeout: 3600, // 1 hour
   },
+  accessControl: {
+    enabled: true,
+    rbacEnabled: true,
+    permissionModel: 'strict',
+  },
+  auditTrail: {
+    enabled: true,
+    retentionPeriod: 'P7Y',
+    logAllAccess: true,
+  },
 });
 
 // Database configuration

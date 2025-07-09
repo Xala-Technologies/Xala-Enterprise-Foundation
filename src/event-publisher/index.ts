@@ -179,7 +179,10 @@ export class EventPublisher {
     if (!this.batchBuffer.has(batchId)) {
       this.batchBuffer.set(batchId, []);
     }
-    this.batchBuffer.get(batchId)!.push(event);
+    const batch = this.batchBuffer.get(batchId);
+    if (batch) {
+      batch.push(event);
+    }
   }
 
   // Sort events by priority

@@ -209,10 +209,16 @@ async function auditSecurity(result: AuditResult): Promise<void> {
 
       result.eventsCount++;
     } catch (error) {
-      logger.error('Package.json security audit failed', { error });
+      logger.error(
+        'Package.json security audit failed',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   } catch (error) {
-    logger.error('Security audit failed', { error });
+    logger.error(
+      'Security audit failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -280,11 +286,17 @@ async function auditCompliance(result: AuditResult): Promise<void> {
 
         result.eventsCount++;
       } catch (error) {
-        logger.error(`Compliance check failed for ${check.check}`, { error });
+        logger.error(
+          `Compliance check failed for ${check.check}`,
+          error instanceof Error ? error : new Error(String(error))
+        );
       }
     }
   } catch (error) {
-    logger.error('Compliance audit failed', { error });
+    logger.error(
+      'Compliance audit failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 
@@ -323,7 +335,10 @@ async function auditPerformance(result: AuditResult): Promise<void> {
 
     result.eventsCount++;
   } catch (error) {
-    logger.error('Performance audit failed', { error });
+    logger.error(
+      'Performance audit failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 }
 

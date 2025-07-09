@@ -3,6 +3,14 @@
  * React Native AsyncStorage with Norwegian compliance
  */
 
+import { createLogger } from '../../src/logger/index.js';
+
+const logger = createLogger({
+  level: 'debug',
+  auditEnabled: true,
+  complianceEnabled: true,
+});
+
 export class AsyncStorageAdapter {
   private prefix: string;
 
@@ -38,7 +46,10 @@ export class AsyncStorageAdapter {
       this.setItem(storageKey, JSON.stringify(storageData));
       return true;
     } catch (error) {
-      console.warn('Failed to store mobile data:', error);
+      logger.warn(
+        'Failed to store mobile data',
+        error instanceof Error ? error : new Error(String(error))
+      );
       return false;
     }
   }
@@ -63,7 +74,10 @@ export class AsyncStorageAdapter {
 
       return storageData.data;
     } catch (error) {
-      console.warn('Failed to retrieve mobile data:', error);
+      logger.warn(
+        'Failed to retrieve mobile data',
+        error instanceof Error ? error : new Error(String(error))
+      );
       return null;
     }
   }
@@ -78,7 +92,10 @@ export class AsyncStorageAdapter {
       await this.removeItem(storageKey);
       return true;
     } catch (error) {
-      console.warn('Failed to remove mobile data:', error);
+      logger.warn(
+        'Failed to remove mobile data',
+        error instanceof Error ? error : new Error(String(error))
+      );
       return false;
     }
   }
@@ -89,10 +106,13 @@ export class AsyncStorageAdapter {
   async clear(): Promise<boolean> {
     try {
       // In a real React Native app, this would iterate through AsyncStorage keys
-      console.log('Clearing mobile storage for prefix:', this.prefix);
+      logger.debug('Clearing mobile storage for prefix', { prefix: this.prefix });
       return true;
     } catch (error) {
-      console.warn('Failed to clear mobile data:', error);
+      logger.warn(
+        'Failed to clear mobile data',
+        error instanceof Error ? error : new Error(String(error))
+      );
       return false;
     }
   }

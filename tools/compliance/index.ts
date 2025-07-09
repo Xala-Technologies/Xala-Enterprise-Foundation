@@ -97,9 +97,10 @@ class ComplianceChecker {
 
       return result;
     } catch (error) {
-      logger.error('Compliance check failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        'Compliance check failed',
+        error instanceof Error ? error : new Error(String(error))
+      );
       result.compliant = false;
       result.issues.push({
         type: 'security',
@@ -331,7 +332,8 @@ class ComplianceChecker {
     }
 
     // Check language support
-    const supportedLanguages = foundationConfig.modules?.i18n?.supportedLanguages || [];
+    const supportedLanguages =
+      (foundationConfig.modules?.i18n?.supportedLanguages as string[]) || [];
     if (!supportedLanguages.includes('nb') && !supportedLanguages.includes('nn')) {
       result.issues.push({
         type: 'digdir',

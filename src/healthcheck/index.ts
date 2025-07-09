@@ -410,7 +410,7 @@ export class HealthManager {
 
   // Execute check with timeout
   private async executeWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error('Health check timeout')), timeout);
@@ -421,7 +421,7 @@ export class HealthManager {
       return await Promise.race([promise, timeoutPromise]);
     } finally {
       // Clear the specific timeout when promise resolves/rejects
-      if (timeoutId!) {
+      if (timeoutId) {
         clearTimeout(timeoutId);
         this.timeouts.delete(timeoutId);
       }
@@ -468,7 +468,7 @@ export class HealthManager {
     this.timeouts.clear();
 
     // Clear all auto-check timers
-    for (const [name, timer] of this.autoCheckTimers) {
+    for (const [, timer] of this.autoCheckTimers) {
       clearInterval(timer);
     }
     this.autoCheckTimers.clear();

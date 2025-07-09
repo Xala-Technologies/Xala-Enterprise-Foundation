@@ -305,7 +305,7 @@ export class SagaOrchestrator {
 
   // Execute with timeout
   private async executeWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error('Step execution timeout')), timeout);
@@ -316,7 +316,7 @@ export class SagaOrchestrator {
       return await Promise.race([promise, timeoutPromise]);
     } finally {
       // Clear the specific timeout when promise resolves/rejects
-      if (timeoutId!) {
+      if (timeoutId) {
         clearTimeout(timeoutId);
         this.timeouts.delete(timeoutId);
       }

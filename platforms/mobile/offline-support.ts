@@ -2,12 +2,20 @@
  * Mobile Offline Support
  */
 
+import { createLogger } from '../../src/logger/index.js';
+
+const logger = createLogger({
+  level: 'debug',
+  auditEnabled: true,
+  complianceEnabled: true,
+});
+
 export class OfflineManager {
   isOffline() {
     return false;
   }
 
   enableOfflineSupport() {
-    console.log('Mobile offline support enabled');
+    logger.debug('Mobile offline support enabled');
   }
 }

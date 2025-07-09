@@ -2,12 +2,20 @@
  * Desktop IPC Bridge
  */
 
+import { createLogger } from '../../src/logger/index.js';
+
+const logger = createLogger({
+  level: 'debug',
+  auditEnabled: true,
+  complianceEnabled: true,
+});
+
 export function sendToRenderer(channel: string, data: any): void {
-  console.log(`Sending to renderer: ${channel}`, data);
+  logger.debug(`Sending to renderer: ${channel}`, { channel, data });
 }
 
 export function sendToMain(channel: string, data: any): void {
-  console.log(`Sending to main: ${channel}`, data);
+  logger.debug(`Sending to main: ${channel}`, { channel, data });
 }
 
 export class IPCEventBridge {

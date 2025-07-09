@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
-import { join, extname } from 'path';
+import { extname, join } from 'path';
 import { createLogger } from '../../../src/logger/index.js';
 
 const logger = createLogger({
@@ -88,9 +88,10 @@ export async function analyzeFoundation(options: AnalyzeOptions): Promise<Analys
 
     return result;
   } catch (error) {
-    logger.error('Foundation analysis failed', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.error(
+      'Foundation analysis failed',
+      error instanceof Error ? error : new Error(String(error))
+    );
     throw error;
   }
 }

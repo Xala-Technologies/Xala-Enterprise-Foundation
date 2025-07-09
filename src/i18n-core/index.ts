@@ -40,8 +40,8 @@ export class I18nManager {
       ...options,
     };
 
-    this.currentLocale = this.options.defaultLocale!;
-    this.fallbackLocale = this.options.fallbackLocale!;
+    this.currentLocale = this.options.defaultLocale || 'nb-NO';
+    this.fallbackLocale = this.options.fallbackLocale || 'en';
 
     // Initialize Norwegian locales
     this.initializeNorwegianLocales();
