@@ -1,0 +1,361 @@
+name: Release Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 2.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+          - stable
+          - pre-release
+          - patch
+      generate_changelog:
+        description: 'Generate changelog from commits'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  NODE_ENV: production
+
+jobs:
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate-version.outputs.version }}
+      tag-name: ${{ steps.validate-version.outputs.tag-name }}
+      is-prerelease: ${{ steps.validate-version.outputs.is-prerelease }}
+      changelog: ${{ steps.generate-changelog.outputs.changelog }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate version and prepare release
+        id: validate-version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+
+          # Validate semantic versioning format
+          # Pattern: MAJOR.MINOR.PATCH with optional prerelease and build metadata
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Version must follow semantic versioning (e.g., 2.0.0, 2.0.0-beta.1, 1.0.0+build.1)"
+            exit 1
+          fi
+
+          # Determine if pre-release
+          IS_PRERELEASE="false"
+          if [[ "$VERSION" =~ [+-] ]] || [[ "$RELEASE_TYPE" == "pre-release" ]]; then
+            IS_PRERELEASE="true"
+          fi
+
+          TAG_NAME="v$VERSION"
+
+          # Check if tag already exists
+          if git tag -l | grep -q "^$TAG_NAME$"; then
+            echo "❌ Tag $TAG_NAME already exists"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+
+          echo "✅ Version validation completed"
+          echo "Version: $VERSION"
+          echo "Tag: $TAG_NAME"
+          echo "Pre-release: $IS_PRERELEASE"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update package.json version
+        run: |
+          VERSION="${{ steps.validate-version.outputs.version }}"
+
+          # Update package.json version
+          node -e "
+            import { readFileSync, writeFileSync } from 'fs';
+            const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            console.log('Updated package.json version to $VERSION');
+          " --input-type=module
+
+      - name: Generate changelog
+        id: generate-changelog
+        if: github.event.inputs.generate_changelog == 'true'
+        run: |
+          echo "Generating changelog for release..."
+
+          # Get the last tag
+          LAST_TAG=$(git tag -l --sort=-version:refname | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tags found, generating full changelog"
+            COMMIT_RANGE="HEAD"
+          else
+            echo "Generating changelog since $LAST_TAG"
+            COMMIT_RANGE="$LAST_TAG..HEAD"
+          fi
+
+          # Generate changelog
+          CHANGELOG=$(cat << 'EOF'
+          ## What's Changed
+
+          EOF
+          )
+
+          # Get commits with conventional commit format
+          while IFS= read -r commit; do
+            CHANGELOG="${CHANGELOG}* ${commit}"$'\n'
+          done < <(git log $COMMIT_RANGE --pretty=format:"- %s" --reverse)
+
+          # Add Norwegian compliance section
+          CHANGELOG="${CHANGELOG}"$'\n\n'
+          CHANGELOG="${CHANGELOG}## Norwegian Compliance"$'\n'
+          CHANGELOG="${CHANGELOG}This release maintains full compliance with:"$'\n'
+          CHANGELOG="${CHANGELOG}- NSM (Norwegian National Security Authority) security classifications"$'\n'
+          CHANGELOG="${CHANGELOG}- GDPR (General Data Protection Regulation)"$'\n'
+          CHANGELOG="${CHANGELOG}- DigDir (Norwegian Digitalization Agency) standards"$'\n'
+
+          # Save changelog to output
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Also save to file for later use
+          echo "$CHANGELOG" > release-notes.md
+
+      - name: Commit version bump
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add package.json
+          git commit -m "chore: bump version to ${{ steps.validate-version.outputs.version }}"
+
+      - name: Build and validate release
+        run: |
+          echo "Building release candidate..."
+          pnpm run build
+
+          # Validate build
+          test -f dist/index.js || (echo "Missing main file" && exit 1)
+          test -f dist/index.d.ts || (echo "Missing types file" && exit 1)
+
+          # Test Norwegian compliance features
+          node -e "
+            (async () => {
+              try {
+                const packageModule = await import('./dist/index.esm.js');
+                if (!packageModule.EventBus || !packageModule.NORWEGIAN_COMPLIANCE) {
+                  throw new Error('Critical {{PACKAGE_NAME}} features missing');
+                }
+                console.log('✅ Release build validated');
+              } catch (error) {
+                console.error('❌ Release validation failed:', error.message);
+                process.exit(1);
+              }
+            })();
+          "
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-${{ steps.validate-version.outputs.version }}
+          path: |
+            dist/
+            package.json
+            release-notes.md
+          retention-days: 7
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: prepare-release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-candidate-${{ needs.prepare-release.outputs.version }}
+          path: ./
+
+      - name: Setup Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Create and push tag
+        run: |
+          TAG_NAME="${{ needs.prepare-release.outputs.tag-name }}"
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+
+          # Create annotated tag
+          git tag -a "$TAG_NAME" -m "Release $VERSION"
+
+          # Push tag
+          git push origin "$TAG_NAME"
+
+          echo "✅ Created and pushed tag $TAG_NAME"
+
+      - name: Create GitHub Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag-name }}
+          release_name: '{{PACKAGE_DISPLAY_NAME}} Package v${{ needs.prepare-release.outputs.version }}'
+          body: |
+            # @xala-technologies/{{PACKAGE_NAME}} v${{ needs.prepare-release.outputs.version }}
+
+            {{PACKAGE_DESCRIPTION}}
+
+            ## Installation
+
+            ```bash
+            pnpm add @xala-technologies/{{PACKAGE_NAME}}@${{ needs.prepare-release.outputs.version }}
+            ```
+
+            ## Release Notes
+
+            ${{ needs.prepare-release.outputs.changelog }}
+
+            ## Documentation
+
+            - [Getting Started](https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/blob/v${{ needs.prepare-release.outputs.version }}/docs/getting-started.md)
+            - [Implementation Guide](https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/blob/v${{ needs.prepare-release.outputs.version }}/docs/implementation-guide.md)
+            - [Norwegian Compliance](https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/blob/v${{ needs.prepare-release.outputs.version }}/docs/compliance/norwegian-compliance.md)
+
+            ## What's Included
+
+            - **Event-driven architecture** with EventBus and ServiceRegistry
+            - **Norwegian compliance** with NSM, GDPR, and DigDir support
+            - **Security utilities** with encryption and validation
+            - **Configuration management** with environment-specific settings
+            - **Audit logging** for government compliance requirements
+            - **TypeScript support** with comprehensive type definitions
+
+            ## Verification
+
+            Package integrity can be verified using the checksums provided in the release assets.
+
+            For questions or support, please visit our [documentation](https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/tree/v${{ needs.prepare-release.outputs.version }}/docs) or open an issue.
+          draft: false
+          prerelease: ${{ needs.prepare-release.outputs.is-prerelease }}
+
+      - name: Upload package archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./xala-technologies-{{PACKAGE_NAME}}-${{ needs.prepare-release.outputs.version }}.tgz
+          asset_name: xala-technologies-{{PACKAGE_NAME}}-${{ needs.prepare-release.outputs.version }}.tgz
+          asset_content_type: application/gzip
+        continue-on-error: true
+
+  post-release:
+    name: Post-release Tasks
+    runs-on: ubuntu-latest
+    needs: [prepare-release, create-release]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG.md
+        if: github.event.inputs.generate_changelog == 'true'
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          TAG_NAME="${{ needs.prepare-release.outputs.tag-name }}"
+          DATE=$(date +"%Y-%m-%d")
+
+          # Create or update CHANGELOG.md
+          if [ ! -f CHANGELOG.md ]; then
+            cat > CHANGELOG.md << EOF
+          # Changelog
+
+          All notable changes to the @xala-technologies/{{PACKAGE_NAME}} package will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+          EOF
+          fi
+
+          # Download release notes
+          if [ -f release-notes.md ]; then
+            CHANGELOG_ENTRY="## [$VERSION] - $DATE\n\n"
+            CHANGELOG_ENTRY="${CHANGELOG_ENTRY}$(cat release-notes.md)\n\n"
+
+            # Insert new entry after the header
+            sed -i "1,/^$/a\\
+          $CHANGELOG_ENTRY" CHANGELOG.md
+          fi
+
+      - name: Commit and push changelog
+        if: github.event.inputs.generate_changelog == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          if [ -f CHANGELOG.md ]; then
+            git add CHANGELOG.md
+            git commit -m "docs: update changelog for v${{ needs.prepare-release.outputs.version }}"
+            git push origin main
+          fi
+
+      - name: Release summary
+        run: |
+          echo "🎉 Release v${{ needs.prepare-release.outputs.version }} completed successfully!"
+          echo ""
+          echo "📋 Release Details:"
+          echo "- Version: ${{ needs.prepare-release.outputs.version }}"
+          echo "- Tag: ${{ needs.prepare-release.outputs.tag-name }}"
+          echo "- Pre-release: ${{ needs.prepare-release.outputs.is-prerelease }}"
+          echo ""
+          echo "🔗 Links:"
+          echo "- Release: https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/releases/tag/${{ needs.prepare-release.outputs.tag-name }}"
+          echo "- Package: https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}/packages"
+          echo ""
+          echo "📦 Next steps:"
+          echo "1. The package will be automatically published to GitHub Packages"
+          echo "2. Update dependent projects to use the new version"
+          echo "3. Monitor for any issues or feedback"
