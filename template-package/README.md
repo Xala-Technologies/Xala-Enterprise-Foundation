@@ -271,8 +271,8 @@ The package includes comprehensive test suites for:
 
 ```bash
 # Clone the repository
-git clone https://github.com/{{GITHUB_ORG}}/{{PACKAGE_NAME}}.git
-cd {{PACKAGE_NAME}}
+git clone https://github.com/{{GITHUB_ORG}}/Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}.git
+cd Xala-Enterprise-{{PACKAGE_DISPLAY_NAME}}
 
 # Install dependencies
 pnpm install
