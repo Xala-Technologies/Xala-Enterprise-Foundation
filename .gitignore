@@ -146,3 +146,4 @@ package-lock.json
 yarn.lock
 .cursor-updates
 test-package
+xala-packages/

@@ -1,4 +1,4 @@
-# Xala Enterprise - {{PACKAGE_NAME}}
+# Xala Enterprise - {{PACKAGE_DISPLAY_NAME}}
 
 {{PACKAGE_DESCRIPTION}}
 
