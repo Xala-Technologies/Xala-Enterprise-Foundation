@@ -147,3 +147,6 @@ yarn.lock
 .cursor-updates
 test-package
 xala-packages/
+xala-packages/business-services
+xala-packages/monitoring-services
+xala-packages/norwegian-services
