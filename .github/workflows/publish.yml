@@ -130,9 +130,23 @@ jobs:
         run: |
           echo "Checking for sensitive files in package..."
 
-          # Files that should not be published
-          SENSITIVE_PATTERNS=".env .env.* *.key *.pem *.p12 secrets.* credentials.*"
+          # Files that should not be published (excluding safe template files)
+          echo "🔍 Checking for actual .env files (excluding .env.example)..."
+          if find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "❌ Sensitive .env files found:"
+            find . -name ".env" -not -path "./node_modules/*" -not -path "./.git/*"
+            exit 1
+          fi
 
+          echo "🔍 Checking for .env.* files (excluding .env.example)..."
+          if find . -name ".env.*" -not -name ".env.example" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
+            echo "❌ Sensitive .env.* files found (excluding safe .env.example):"
+            find . -name ".env.*" -not -name ".env.example" -not -path "./node_modules/*" -not -path "./.git/*"
+            exit 1
+          fi
+
+          # Check other sensitive file patterns
+          SENSITIVE_PATTERNS="*.key *.pem *.p12 secrets.* credentials.*"
           for pattern in $SENSITIVE_PATTERNS; do
             if find . -name "$pattern" -not -path "./node_modules/*" -not -path "./.git/*" | grep -q .; then
               echo "❌ Sensitive files found matching pattern: $pattern"
@@ -141,7 +155,7 @@ jobs:
             fi
           done
 
-          echo "✅ No sensitive files found"
+          echo "✅ No sensitive files found (.env.example files are allowed as templates)"
 
   build-and-test:
     name: Build and Test for Publishing
