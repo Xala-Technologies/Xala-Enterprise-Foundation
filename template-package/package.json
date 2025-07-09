@@ -1,6 +1,6 @@
 {
   "name": "@xala-technologies/{{PACKAGE_NAME}}",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "{{PACKAGE_DESCRIPTION}}",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
