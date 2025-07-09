@@ -160,7 +160,7 @@ create_package() {
     # Initialize git repository
     echo "   🔧 Initializing git repository..."
     git init
-    git remote add origin "https://github.com/${GITHUB_ORG}/${repo_name}.git"
+    git remote add origin "git@github.com:${GITHUB_ORG}/${repo_name}.git"
 
     # Replace template variables in files from local template
     echo "   🔄 Replacing template variables in template files..."
@@ -186,38 +186,74 @@ create_package() {
             # Create a temporary file for safe replacement
             temp_file=$(mktemp)
 
-            # Use Python for more robust string replacement to handle special characters
-            python3 -c "
+            # Create a temporary Python script to handle complex descriptions safely
+            cat > "${temp_file}_replace.py" << 'PYTHON_EOF'
 import sys
-import re
+import os
+
+# Get variables from environment
+package_name = os.environ.get('PACKAGE_NAME_VAR', '')
+display_name = os.environ.get('DISPLAY_NAME_VAR', '')
+description = os.environ.get('DESCRIPTION_VAR', '')
+github_org = os.environ.get('GITHUB_ORG_VAR', '')
+nsm_classification = os.environ.get('NSM_CLASSIFICATION_VAR', '')
+input_file = os.environ.get('INPUT_FILE', '')
+output_file = os.environ.get('OUTPUT_FILE', '')
 
 # Read the file
-with open('$file', 'r', encoding='utf-8') as f:
+with open(input_file, 'r', encoding='utf-8') as f:
     content = f.read()
 
-# Replace template variables
-content = content.replace('{{PACKAGE_NAME}}', '$package_name_kebab')
-content = content.replace('{{PACKAGE_DISPLAY_NAME}}', '$display_name_pascal')
-content = content.replace('{{PACKAGE_DESCRIPTION}}', '''$description''')
-content = content.replace('{{GITHUB_ORG}}', '$GITHUB_ORG')
-content = content.replace('{{NSM_CLASSIFICATION}}', '$nsm_classification')
+# Replace template variables safely
+content = content.replace('{{PACKAGE_NAME}}', package_name)
+content = content.replace('{{PACKAGE_DISPLAY_NAME}}', display_name)
+content = content.replace('{{PACKAGE_DESCRIPTION}}', description)
+content = content.replace('{{GITHUB_ORG}}', github_org)
+content = content.replace('{{NSM_CLASSIFICATION}}', nsm_classification)
 
-# Write to temp file
-with open('$temp_file', 'w', encoding='utf-8') as f:
+# Write to output file
+with open(output_file, 'w', encoding='utf-8') as f:
     f.write(content)
-" 2>/dev/null || {
-                # Fallback to sed if Python fails
-                cp "$file" "$temp_file"
-                # Escape special characters for sed
-                escaped_description=$(printf '%s\n' "$description" | sed 's/[[\.*^$()+?{|]/\\&/g')
+PYTHON_EOF
 
+            # Set environment variables and run Python script
+            PACKAGE_NAME_VAR="$package_name_kebab" \
+            DISPLAY_NAME_VAR="$display_name_pascal" \
+            DESCRIPTION_VAR="$description" \
+            GITHUB_ORG_VAR="$GITHUB_ORG" \
+            NSM_CLASSIFICATION_VAR="$nsm_classification" \
+            INPUT_FILE="$file" \
+            OUTPUT_FILE="$temp_file" \
+            python3 "${temp_file}_replace.py" 2>/dev/null && rm "${temp_file}_replace.py" || {
+                # Fallback to sed if Python fails
+                echo "   ⚠️ Python replacement failed for $file, using sed fallback"
+                cp "$file" "$temp_file"
+
+                # Use a more robust sed approach for complex descriptions
+                # First do simple replacements
                 sed -i.bak \
                     -e "s/{{PACKAGE_NAME}}/${package_name_kebab}/g" \
                     -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
-                    -e "s|{{PACKAGE_DESCRIPTION}}|${escaped_description}|g" \
                     -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
                     -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
                     "$temp_file" 2>/dev/null || true
+
+                # Handle description separately with Perl for better Unicode/special char support
+                if command -v perl &> /dev/null; then
+                    perl -i -pe "s/\\{\\{PACKAGE_DESCRIPTION\\}\\}/\Q$description\E/g" "$temp_file" 2>/dev/null || {
+                        # Final fallback - manual description replacement
+                        echo "   ⚠️ Complex description replacement may have issues"
+                        # Try basic sed with escaped description
+                        escaped_description=$(printf '%s\n' "$description" | sed 's/[[\.*^$()+?{|\\]/\\&/g')
+                        sed -i.bak2 "s|{{PACKAGE_DESCRIPTION}}|${escaped_description}|g" "$temp_file" 2>/dev/null || true
+                        rm -f "${temp_file}.bak2" 2>/dev/null || true
+                    }
+                else
+                    # Try basic sed replacement for description
+                    escaped_description=$(printf '%s\n' "$description" | sed 's/[[\.*^$()+?{|\\]/\\&/g')
+                    sed -i.bak2 "s|{{PACKAGE_DESCRIPTION}}|${escaped_description}|g" "$temp_file" 2>/dev/null || true
+                    rm -f "${temp_file}.bak2" 2>/dev/null || true
+                fi
 
                 # Remove backup file
                 rm -f "${temp_file}.bak" 2>/dev/null || true
@@ -372,20 +408,24 @@ ${description}" 2>&1 | tee /tmp/commit_output.log
         echo "   🚀 Setting up main branch and pushing to remote repository..."
         git branch -M main
 
-        # Try to push with better error handling
-        if timeout 300 git push -u origin main --progress 2>&1 | tee /tmp/push_output.log; then
+        # Try to push with better error handling (macOS compatible)
+        echo "   🚀 Pushing to GitHub repository..."
+        if git push -u origin main --progress 2>&1 | tee /tmp/push_output.log; then
             echo "   ✅ Repository created and pushed successfully"
+
+            # Verify the push was successful by checking remote
+            if git ls-remote --exit-code origin main >/dev/null 2>&1; then
+                echo "   ✅ Push verified - repository is live on GitHub"
+            else
+                echo "   ⚠️ Push may have failed - please check manually"
+            fi
         else
             push_result=$?
-            if [ $push_result -eq 124 ]; then
-                echo "   ⏱️ Push timed out after 5 minutes"
-                echo "   💡 This might be due to large files or network issues"
-            else
-                echo "   ⚠️ Push failed with exit code: $push_result"
-                echo "   📋 Push output:"
-                tail -10 /tmp/push_output.log
-            fi
-            echo "   🔧 You can manually push later with: cd ${repo_dir} && git push -u origin main"
+            echo "   ❌ Push failed with exit code: $push_result"
+            echo "   📋 Push output:"
+            tail -10 /tmp/push_output.log
+            echo "   🔧 Manual push required: cd ${repo_dir} && git push -u origin main"
+            return 1
         fi
     else
         echo "   ✅ No changes to commit"
