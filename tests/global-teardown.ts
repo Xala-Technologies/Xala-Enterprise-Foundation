@@ -3,6 +3,7 @@
  * Ensures all resources are properly cleaned up after test suites
  */
 
+import { getEventBus } from '../src/event-core';
 import { getEventPublisher } from '../src/event-publisher';
 import { getHealthManager } from '../src/healthcheck';
 import { getMetricsCollector } from '../src/metrics-sdk';
@@ -23,6 +24,10 @@ export default async function globalTeardown() {
     // Clean up event publisher
     const eventPublisher = getEventPublisher();
     eventPublisher.cleanup();
+
+    // Clean up event bus
+    const eventBus = getEventBus();
+    eventBus.cleanup();
 
     // Stop all metrics collectors
     const metricsCollector = getMetricsCollector();

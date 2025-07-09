@@ -3,12 +3,12 @@
  * Initialize Foundation for Server/API Environment
  */
 
-import type { FoundationConfig } from '../../src/config-loader/index.js';
-import { EventPublisher } from '../../src/event-publisher/index.js';
-import { EventSubscriber } from '../../src/event-subscriber/index.js';
-import { createLogger } from '../../src/logger/index.js';
-import { performHealthCheck } from './health-checks.js';
-import { startMetricsCollection } from './metrics-collector.js';
+import type { FoundationConfig } from '../../src/config-loader/index';
+import { EventPublisher } from '../../src/event-publisher/index';
+import { EventSubscriber } from '../../src/event-subscriber/index';
+import { createLogger } from '../../src/logger/index';
+import { performHealthCheck } from './health-checks';
+import { startMetricsCollection } from './metrics-collector';
 
 const logger = createLogger({ level: 'info' });
 

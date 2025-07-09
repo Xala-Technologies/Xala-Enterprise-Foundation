@@ -8,8 +8,8 @@ import {
   getMetricsCollector,
   getSagaOrchestrator,
   initializeFoundation,
-} from '../../src/index.js';
-import { createLogger } from '../../src/logger/index.js';
+} from '../../src/index';
+import { createLogger } from '../../src/logger/index';
 
 describe('Foundation Module Integration Tests', () => {
   let logger: ReturnType<typeof createLogger>;

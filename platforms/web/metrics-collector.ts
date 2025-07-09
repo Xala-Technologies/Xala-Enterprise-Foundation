@@ -3,7 +3,7 @@
  * Browser-optimized metrics collection with Norwegian compliance
  */
 
-import { createLogger } from '../../src/logger/index.js';
+import { createLogger } from '../../src/logger/index';
 import { getMetricsCollector } from '../../src/metrics-sdk';
 
 const logger = createLogger({ level: 'info' });

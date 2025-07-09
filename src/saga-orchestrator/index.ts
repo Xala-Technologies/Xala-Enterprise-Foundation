@@ -349,7 +349,13 @@ export class SagaOrchestrator {
 
   // Delay helper
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve();
+        this.timeouts.delete(timeoutId);
+      }, ms);
+      this.timeouts.add(timeoutId);
+    });
   }
 
   // Log audit entry

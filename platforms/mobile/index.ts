@@ -4,20 +4,20 @@
  */
 
 // Re-export core foundation functionality
-export * from '../../src/index.js';
+export * from '../../src/index';
 
 // Mobile-specific exports (specific exports to avoid conflicts)
+export * from './metrics-collector';
 export {
   publishEvent as publishMobileEvent,
   subscribeToEvent as subscribeToMobileEvent,
-} from './mobile-events.js';
-export * from './mobile-logger.js';
-export * from './mobile-storage.js';
-export * from './storage-adapter.js';
-export * from './metrics-collector.js';
-export * from './offline-support.js';
-export * from './offline-queue.js';
-export { setupMobile } from './setup.js';
+} from './mobile-events';
+export * from './mobile-logger';
+export * from './mobile-storage';
+export * from './offline-queue';
+export * from './offline-support';
+export { setupMobile } from './setup';
+export * from './storage-adapter';
 
 // Platform detection
 export const PLATFORM = 'mobile' as const;

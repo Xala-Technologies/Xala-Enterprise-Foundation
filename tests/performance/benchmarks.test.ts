@@ -4,7 +4,7 @@
  */
 
 import { performance } from 'perf_hooks';
-import { setupWebFoundation } from '../../platforms/web/index.js';
+import { setupWebFoundation } from '../../platforms/web/index';
 import {
   createLogger,
   getErrorHandler,
@@ -12,7 +12,7 @@ import {
   getI18nManager,
   getMetricsCollector,
   initializeFoundation,
-} from '../../src/index.js';
+} from '../../src/index';
 
 // Mark this as a performance test to suppress console logging
 (global as any).__PERFORMANCE_TEST__ = true;

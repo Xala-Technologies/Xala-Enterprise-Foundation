@@ -1,7 +1,7 @@
-import { FoundationErrorHandler } from '../../src/error-handler/index.js';
-import { FeatureToggleManager } from '../../src/feature-toggle/index.js';
-import { initializeFoundation } from '../../src/index.js';
-import { createLogger } from '../../src/logger/index.js';
+import { FoundationErrorHandler } from '../../src/error-handler/index';
+import { FeatureToggleManager } from '../../src/feature-toggle/index';
+import { initializeFoundation } from '../../src/index';
+import { createLogger } from '../../src/logger/index';
 
 describe('Norwegian Government Compliance Tests', () => {
   describe('NSM (Norwegian Security Authority) Compliance', () => {

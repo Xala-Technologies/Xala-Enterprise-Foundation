@@ -3,8 +3,8 @@
  * Initialize Foundation for React Native Environment
  */
 
-import type { FoundationConfig } from '../../src/config-loader/index.js';
-import { createLogger } from '../../src/logger/index.js';
+import type { FoundationConfig } from '../../src/config-loader/index';
+import { createLogger } from '../../src/logger/index';
 
 const logger = createLogger({ level: 'info' });
 

@@ -53,7 +53,11 @@ export class EventPublisher {
 
     // Handle delayed publishing
     if (options.delay && options.delay > 0) {
-      setTimeout(() => this.publishNow(event), options.delay);
+      const timeoutId = setTimeout(() => {
+        this.publishNow(event);
+        this.scheduledTimeouts.delete(timeoutId);
+      }, options.delay);
+      this.scheduledTimeouts.add(timeoutId);
       return;
     }
 
@@ -211,6 +215,11 @@ export class EventPublisher {
       // Remove timeout from tracking
       this.scheduledTimeouts.delete(timeoutId);
     }, delay);
+
+    // Unref so it doesn't keep process alive
+    if (typeof timeoutId.unref === 'function') {
+      timeoutId.unref();
+    }
 
     // Track timeout for cleanup
     this.scheduledTimeouts.add(timeoutId);

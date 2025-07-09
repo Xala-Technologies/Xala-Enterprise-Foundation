@@ -2,7 +2,7 @@
  * Desktop Metrics Collector
  */
 
-import { createLogger } from '../../src/logger/index.js';
+import { createLogger } from '../../src/logger/index';
 
 // Create logger with proper options object
 const logger = createLogger({ level: 'info' });

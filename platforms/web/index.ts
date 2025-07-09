@@ -4,15 +4,15 @@
  */
 
 // Re-export core foundation functionality
-export * from '../../src/index.js';
+export * from '../../src/index';
 
 // Web-specific exports
-export * from './metrics-collector.js';
-export { setupWeb } from './setup.js';
-export { WebStorageAdapter as BrowserStorageAdapter } from './storage-adapter.js';
-export * from './web-events.js';
-export * from './web-logger.js';
-export * from './web-storage.js';
+export * from './metrics-collector';
+export { setupWeb } from './setup';
+export { WebStorageAdapter as BrowserStorageAdapter } from './storage-adapter';
+export * from './web-events';
+export * from './web-logger';
+export * from './web-storage';
 
 // New Web Foundation exports
 export {
@@ -26,7 +26,7 @@ export {
   type WebMetricsInterface,
   type WebSecurityInterface,
   type WebStorageInterface,
-} from './setup.js';
+} from './setup';
 
 // Platform detection
 export const PLATFORM = 'web' as const;

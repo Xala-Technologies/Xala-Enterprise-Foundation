@@ -418,13 +418,21 @@ describe('Health Check User Stories', () => {
     healthManager.registerCheck({
       name: 'timeout_service',
       check: async () => {
-        // Simulate a hanging service
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        // Simulate a hanging service but with a reasonable timeout for tests
+        await new Promise(resolve => {
+          const timeoutId = setTimeout(() => {
+            resolve(undefined);
+          }, 5000); // Still long enough to trigger timeout, but not 10 seconds
+          // Unref so it doesn't keep process alive
+          if (typeof timeoutId.unref === 'function') {
+            timeoutId.unref();
+          }
+        });
         return {
           name: 'timeout_service',
           status: 'healthy' as const,
           timestamp: new Date(),
-          duration: 10000,
+          duration: 5000,
           message: 'This should not complete',
         };
       },

@@ -1,4 +1,4 @@
-import { setupWebFoundation } from '../../platforms/web/index.js';
+import { setupWebFoundation } from '../../platforms/web/index';
 
 // Mock browser environment
 const mockLocalStorage = new Map<string, string>();

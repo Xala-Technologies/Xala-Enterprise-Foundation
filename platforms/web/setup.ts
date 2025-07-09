@@ -3,9 +3,9 @@
  * Initialize Foundation for Browser Environment
  */
 
-import type { FoundationConfig } from '../../src/config-loader/index.js';
-import { createLogger } from '../../src/logger/index.js';
-import { setupWebMetrics } from './metrics-collector.js';
+import type { FoundationConfig } from '../../src/config-loader/index';
+import { createLogger } from '../../src/logger/index';
+import { setupWebMetrics } from './metrics-collector';
 
 const logger = createLogger({ level: 'info' });
 

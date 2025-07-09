@@ -35,6 +35,7 @@ export class EventBus {
   private subscriptions: Map<string, EventSubscription[]> = new Map();
   private eventHistory: BaseEvent[] = [];
   private options: EventBusOptions;
+  private timeouts: Set<NodeJS.Timeout> = new Set(); // Track timeouts for cleanup
 
   constructor(options: EventBusOptions = {}) {
     this.options = {
@@ -148,7 +149,13 @@ export class EventBus {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => {
+      const timeoutId = setTimeout(() => {
+        resolve();
+        this.timeouts.delete(timeoutId);
+      }, ms);
+      this.timeouts.add(timeoutId);
+    });
   }
 
   // Get event statistics
@@ -166,6 +173,24 @@ export class EventBus {
 
   // Clear event history (for compliance/privacy)
   clearHistory(): void {
+    this.eventHistory = [];
+  }
+
+  /**
+   * Clean up all active timeouts and resources
+   * Should be called in tests or when shutting down
+   */
+  public cleanup(): void {
+    // Clear all active timeouts
+    for (const timeoutId of this.timeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.timeouts.clear();
+
+    // Clear all subscriptions
+    this.subscriptions.clear();
+
+    // Clear event history
     this.eventHistory = [];
   }
 }

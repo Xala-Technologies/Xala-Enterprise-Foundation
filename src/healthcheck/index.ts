@@ -332,7 +332,13 @@ export class HealthManager {
   private async checkDatabase(): Promise<HealthCheckResult> {
     try {
       // Simulate database connection check
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => {
+        const timeoutId = setTimeout(() => {
+          resolve(undefined);
+          this.timeouts.delete(timeoutId);
+        }, 50);
+        this.timeouts.add(timeoutId);
+      });
 
       return {
         name: 'database',
@@ -433,6 +439,11 @@ export class HealthManager {
         // Auto check failures are logged but don't propagate
       }
     }, interval);
+
+    // Unref the timer so it doesn't keep the process alive
+    if (typeof timer.unref === 'function') {
+      timer.unref();
+    }
 
     this.autoCheckTimers.set(check.name, timer);
   }

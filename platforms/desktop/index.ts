@@ -4,19 +4,19 @@
  */
 
 // Re-export core foundation functionality
-export * from '../../src/index.js';
+export * from '../../src/index';
 
 // Desktop-specific exports (specific exports to avoid conflicts)
 export {
   publishEvent as publishDesktopEvent,
   subscribeToEvent as subscribeToDesktopEvent,
-} from './desktop-events.js';
-export * from './desktop-logger.js';
-export * from './desktop-storage.js';
-export { setupDesktopFoundation } from './setup.js';
-export { ElectronStorageAdapter } from './storage-adapter.js';
-export { IPCEventBridge } from './ipc-bridge.js';
-export { DesktopMetricsCollector } from './metrics-collector.js';
+} from './desktop-events';
+export * from './desktop-logger';
+export * from './desktop-storage';
+export { IPCEventBridge } from './ipc-bridge';
+export { DesktopMetricsCollector } from './metrics-collector';
+export { setupDesktopFoundation } from './setup';
+export { ElectronStorageAdapter } from './storage-adapter';
 
 // Platform detection
 export const PLATFORM = 'desktop' as const;

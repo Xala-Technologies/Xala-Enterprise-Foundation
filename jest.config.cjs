@@ -3,53 +3,15 @@ const path = require('path');
 // Determine if we're running in GitHub Actions
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
 
-// Get the correct root directory for GitHub Actions
-const getRootDir = () => {
-  if (isGitHubActions) {
-    // In GitHub Actions, use GITHUB_WORKSPACE which points to the correct directory
-    const workspaceDir = process.env.GITHUB_WORKSPACE;
-    if (workspaceDir) {
-      return workspaceDir;
-    }
-
-    // Fallback: handle the nested directory structure issue
-    const currentDir = process.cwd();
-
-    // Check if we're in the nested directory structure
-    if (currentDir.includes('/Xala-Enterprise-Foundation')) {
-      // Navigate up to the correct directory level
-      const correctDir = currentDir.replace(
-        '/Xala-Enterprise-Foundation',
-        '/Xala-Enterprise-Foundation'
-      );
-      console.log(
-        `GitHub Actions: Correcting nested directory from ${currentDir} to ${correctDir}`
-      );
-      return correctDir;
-    }
-
-    // If we're already in the correct directory structure
-    if (
-      currentDir.includes('/Xala-Enterprise-Foundation') &&
-      !currentDir.includes('/Xala-Enterprise-Foundation')
-    ) {
-      return currentDir;
-    }
-  }
-  return process.cwd(); // Return current working directory for local development
-};
-
-const rootDir = getRootDir();
-
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  rootDir: rootDir,
-  roots: [path.join(rootDir, 'src'), path.join(rootDir, 'tests')],
+  rootDir: process.cwd(),
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
-    path.join(rootDir, 'src/**/__tests__/**/*.test.ts'),
-    path.join(rootDir, 'src/**/*.test.ts'),
-    path.join(rootDir, 'tests/**/*.test.ts'),
+    '<rootDir>/src/**/__tests__/**/*.test.ts',
+    '<rootDir>/src/**/*.test.ts',
+    '<rootDir>/tests/**/*.test.ts',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -59,30 +21,35 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  setupFilesAfterEnv: [path.join(rootDir, 'tests/setup.ts')],
-  globalSetup: path.join(rootDir, 'tests/global-setup.ts'),
-  globalTeardown: path.join(rootDir, 'tests/global-teardown.ts'),
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  globalSetup: '<rootDir>/tests/global-setup.ts',
+  globalTeardown: '<rootDir>/tests/global-teardown.ts',
+
+  // Apply these settings for both local and CI to prevent hanging
   testTimeout: 30000,
+  maxWorkers: isGitHubActions ? 2 : '50%', // Limit workers to prevent resource exhaustion
+  forceExit: true, // Force exit to prevent hanging
+  detectOpenHandles: isGitHubActions ? false : true, // Show open handles locally, hide in CI
   verbose: true,
-  // Add CI-specific settings
-  ...(isGitHubActions && {
-    maxWorkers: 2, // Limit workers in CI to avoid resource issues
-    forceExit: true, // Force exit to prevent hanging in CI
-    detectOpenHandles: false, // Disable in CI to avoid warnings
-  }),
-  // Handle ES modules properly
-  extensionsToTreatAsEsm: ['.ts'],
+
+  // Handle TypeScript properly
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
       {
-        useESM: true,
+        useESM: false, // Use CommonJS for better Jest compatibility
+        tsconfig: {
+          module: 'commonjs',
+        },
       },
     ],
   },
-  // Module name mapping for ES modules
+
+  // Module resolution
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@/(.*)$': path.join(rootDir, 'src/$1'),
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
+
+  // Ignore node_modules except for ESM modules that need transformation
+  transformIgnorePatterns: ['node_modules/(?!(.*\\.mjs$))'],
 };
