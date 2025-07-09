@@ -219,11 +219,15 @@ build_package() {
     # Test Norwegian compliance features
     log_info "Validating Norwegian compliance features..."
     pnpm exec node -e "
-        const foundation = require('./dist/index.js');
-        if (!foundation.EventBus || !foundation.NORWEGIAN_COMPLIANCE) {
-            throw new Error('Critical foundation features missing from build');
-        }
-        console.log('✅ Norwegian compliance features validated');
+        import('./dist/index.esm.js').then(foundation => {
+            if (!foundation.EventBus || !foundation.NORWEGIAN_COMPLIANCE) {
+                throw new Error('Critical foundation features missing from build');
+            }
+            console.log('✅ Norwegian compliance features validated');
+        }).catch(error => {
+            console.error('❌ Norwegian compliance validation failed:', error.message);
+            process.exit(1);
+        });
     " || log_error "Norwegian compliance validation failed"
 
     log_success "Package built successfully"

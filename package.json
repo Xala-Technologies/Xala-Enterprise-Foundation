@@ -1,6 +1,6 @@
 {
   "name": "@xala-technologies/foundation",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Multi-platform foundation package for Norwegian government-compliant applications. Provides event-driven architecture, security utilities, compliance validation, and configuration management optimized for web, mobile, desktop, and API platforms.",
   "keywords": [
     "foundation",

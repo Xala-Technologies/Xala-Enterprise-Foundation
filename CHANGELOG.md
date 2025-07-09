@@ -1,3 +1,57 @@
+# 2.1.0 (2025-07-09)
+
+
+### Bug Fixes
+
+* copy hidden files including .github folder in package creation ([50b6a51](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/50b6a5175c8ce97b6dea9ccbf77afb9dad85420e))
+* exclude .env.example files from sensitive files check ([29e0b43](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/29e0b43e18240d1efa14dd8f73a06e2489d97fa8))
+* resolve GitHub Actions husky error in production environment ([0f4db92](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/0f4db925c13d869a2e359d422f129e37392bc0ee))
+* resolve template variable replacement issue in package creation scripts ([bad0071](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/bad00715c70136a44a4bea5bcbf5c0f0b675fb8f))
+* resolve workflow hanging issues by adding proper timeout cleanup ([6274d0d](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/6274d0df132a0b3d06da40fceb08ec043384b230))
+* restore correct README header format in template ([a2a7f95](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/a2a7f95e790b50c766f132daa535ca68c864765d))
+* update workflows to use correct pnpm version and include lock file ([29a6ce8](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/29a6ce8dc3203c713bb415c62a2803c1c2a539de))
+* use SSH instead of HTTPS for git remotes in package creation ([6fc1f2b](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/6fc1f2ba714f3e820f4ee95cffeec5b5fe426035))
+
+
+### Features
+
+* add comprehensive implementation plans to package template ([88d4078](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/88d407855d935cba7e1320f50dfc52399f76572d))
+* add Data and Business Services Package Implementation Guides ([9475e3c](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/9475e3c0c53aadee7d74ba67629118590bcab0e8))
+* add Xala Complete Package Ecosystem documentation ([de13984](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/de139846f1a73d6359acdf6c740418d288aa3942))
+* apply all recent workflow fixes to package template ([b7e79e5](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/b7e79e5a1a6ddc423d82edef7c9f98eb64b45df8))
+* enhance documentation for Data and Business Services Packages ([38cc038](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/38cc038cd1c465c45ebe236a579313f813960e1f))
+* enhance local validation script for comprehensive CI/CD checks ([06f13dd](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/06f13dd6776a029b7ddae953912ce48f978df383))
+* **foundation:** initial commit with Norwegian government compliance ([a0cd438](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/a0cd438f5014bce063b46773bc40f1b2c72dc04f))
+
+
+
+## 2.0.1 (2025-07-09)
+
+
+### Bug Fixes
+
+* copy hidden files including .github folder in package creation ([50b6a51](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/50b6a5175c8ce97b6dea9ccbf77afb9dad85420e))
+* exclude .env.example files from sensitive files check ([29e0b43](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/29e0b43e18240d1efa14dd8f73a06e2489d97fa8))
+* resolve GitHub Actions husky error in production environment ([0f4db92](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/0f4db925c13d869a2e359d422f129e37392bc0ee))
+* resolve template variable replacement issue in package creation scripts ([bad0071](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/bad00715c70136a44a4bea5bcbf5c0f0b675fb8f))
+* resolve workflow hanging issues by adding proper timeout cleanup ([6274d0d](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/6274d0df132a0b3d06da40fceb08ec043384b230))
+* restore correct README header format in template ([a2a7f95](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/a2a7f95e790b50c766f132daa535ca68c864765d))
+* update workflows to use correct pnpm version and include lock file ([29a6ce8](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/29a6ce8dc3203c713bb415c62a2803c1c2a539de))
+* use SSH instead of HTTPS for git remotes in package creation ([6fc1f2b](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/6fc1f2ba714f3e820f4ee95cffeec5b5fe426035))
+
+
+### Features
+
+* add comprehensive implementation plans to package template ([88d4078](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/88d407855d935cba7e1320f50dfc52399f76572d))
+* add Data and Business Services Package Implementation Guides ([9475e3c](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/9475e3c0c53aadee7d74ba67629118590bcab0e8))
+* add Xala Complete Package Ecosystem documentation ([de13984](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/de139846f1a73d6359acdf6c740418d288aa3942))
+* apply all recent workflow fixes to package template ([b7e79e5](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/b7e79e5a1a6ddc423d82edef7c9f98eb64b45df8))
+* enhance documentation for Data and Business Services Packages ([38cc038](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/38cc038cd1c465c45ebe236a579313f813960e1f))
+* enhance local validation script for comprehensive CI/CD checks ([06f13dd](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/06f13dd6776a029b7ddae953912ce48f978df383))
+* **foundation:** initial commit with Norwegian government compliance ([a0cd438](https://github.com/Xala-Technologies/Xala-Enterprise-Foundation/commit/a0cd438f5014bce063b46773bc40f1b2c72dc04f))
+
+
+
 # Changelog
 
 All notable changes to the @xala-technologies/foundation package will be documented in this file.

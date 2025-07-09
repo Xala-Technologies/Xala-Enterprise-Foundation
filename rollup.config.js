@@ -1,5 +1,5 @@
-import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -51,6 +51,8 @@ const coreConfig = {
       format: 'cjs',
       sourcemap: isDevelopment,
       exports: 'named',
+      interop: 'auto',
+      esModule: false,
       banner: '/* @xala-technologies/foundation v2.0.0 - Core Foundation Package */',
     },
     {

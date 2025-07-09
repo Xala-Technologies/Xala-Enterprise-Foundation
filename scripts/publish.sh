@@ -127,39 +127,42 @@ validate_package() {
         # Test Norwegian compliance features
     log_info "Validating Norwegian compliance features..."
     pnpm exec node -e "
-        const foundation = require('./dist/index.js');
+        import('./dist/index.esm.js').then(foundation => {
+            // Test core functionality
+            if (!foundation.getEventBus || !foundation.loadConfig) {
+                throw new Error('Core foundation services not available');
+            }
 
-        // Test core functionality
-        if (!foundation.getEventBus || !foundation.loadConfig) {
-            throw new Error('Core foundation services not available');
-        }
+            // Test Norwegian compliance
+            if (!foundation.NORWEGIAN_COMPLIANCE) {
+                throw new Error('Norwegian compliance configuration not available');
+            }
 
-        // Test Norwegian compliance
-        if (!foundation.NORWEGIAN_COMPLIANCE) {
-            throw new Error('Norwegian compliance configuration not available');
-        }
+            // Test NSM classifications
+            if (!foundation.NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS.includes('KONFIDENSIELT')) {
+                throw new Error('NSM security classifications not available');
+            }
 
-        // Test NSM classifications
-        if (!foundation.NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS.includes('KONFIDENSIELT')) {
-            throw new Error('NSM security classifications not available');
-        }
+            // Test GDPR compliance
+            if (!foundation.NORWEGIAN_COMPLIANCE.GDPR_LEGAL_BASIS.includes('public_task')) {
+                throw new Error('GDPR legal basis not available');
+            }
 
-        // Test GDPR compliance
-        if (!foundation.NORWEGIAN_COMPLIANCE.GDPR_LEGAL_BASIS.includes('public_task')) {
-            throw new Error('GDPR legal basis not available');
-        }
+            // Test logging with classification
+            if (!foundation.createNSMClassifiedLog) {
+                throw new Error('NSM classified logging not available');
+            }
 
-        // Test logging with classification
-        if (!foundation.createNSMClassifiedLog) {
-            throw new Error('NSM classified logging not available');
-        }
+            // Test GDPR audit logging
+            if (!foundation.createGDPRAuditLog) {
+                throw new Error('GDPR audit logging not available');
+            }
 
-        // Test GDPR audit logging
-        if (!foundation.createGDPRAuditLog) {
-            throw new Error('GDPR audit logging not available');
-        }
-
-        console.log('✅ Norwegian compliance features validated');
+            console.log('✅ Norwegian compliance features validated');
+        }).catch(error => {
+            console.error('❌ Norwegian compliance validation failed:', error.message);
+            process.exit(1);
+        });
     " || log_error "Norwegian compliance validation failed"
 
     log_success "Package validation passed"
