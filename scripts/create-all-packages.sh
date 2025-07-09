@@ -168,82 +168,50 @@ create_package() {
         return 1
     fi
 
-    # Always update template to ensure we have the latest fixes
-    echo "   🔄 Updating template files to latest version..."
-    skip_setup=false
+    # Replace template variables in files from GitHub template
+    echo "   🔄 Replacing template variables in template files..."
 
-    # Run template setup
-    if [ "$skip_setup" = false ]; then
-        echo "   ⚙️ Setting up package from template..."
+    # Convert display name to PascalCase for proper naming
+    display_name_pascal=$(echo "${display_name}" | sed 's/[^a-zA-Z0-9]//g')
+    package_name_kebab=$(echo "${package_name}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
 
-        # First, copy updated template files
-        echo "   📋 Copying updated template files..."
-        TEMPLATE_DIR="../../template"
+    # Replace template variables in all relevant files
+    echo "   📝 Replacing variables:"
+    echo "      {{PACKAGE_NAME}} → ${package_name_kebab}"
+    echo "      {{PACKAGE_DISPLAY_NAME}} → ${display_name_pascal}"
+    echo "      {{PACKAGE_DESCRIPTION}} → ${description}"
+    echo "      {{GITHUB_ORG}} → ${GITHUB_ORG}"
+    echo "      {{NSM_CLASSIFICATION}} → ${nsm_classification}"
 
-        # Copy source files from template
-        if [ -d "${TEMPLATE_DIR}/src" ]; then
-            cp -rf "${TEMPLATE_DIR}/src"/* ./src/ 2>/dev/null || true
+    # Use find and sed to replace template variables
+    find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" -o -name ".*" \) ! -path "./node_modules/*" ! -path "./.git/*" -print0 | while IFS= read -r -d '' file; do
+        # Check if file contains template variables before processing
+        if grep -q "{{" "$file" 2>/dev/null; then
+            echo "   🔄 Processing: $file"
+            # Create backup and replace variables
+            sed -i.bak \
+                -e "s/{{PACKAGE_NAME}}/${package_name_kebab}/g" \
+                -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
+                -e "s|{{PACKAGE_DESCRIPTION}}|${description}|g" \
+                -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
+                -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
+                "$file" 2>/dev/null || true
+
+            # Remove backup file
+            rm -f "$file.bak" 2>/dev/null || true
         fi
+    done
 
-        # Copy platform files from template
-        if [ -d "${TEMPLATE_DIR}/platforms" ]; then
-            cp -rf "${TEMPLATE_DIR}/platforms"/* ./platforms/ 2>/dev/null || true
-        fi
+    echo "   ✅ Template variables replaced successfully"
 
-        # Copy tools files from template
-        if [ -d "${TEMPLATE_DIR}/tools" ]; then
-            cp -rf "${TEMPLATE_DIR}/tools"/* ./tools/ 2>/dev/null || true
-        fi
-
-        # Copy tests files from template
-        if [ -d "${TEMPLATE_DIR}/tests" ]; then
-            cp -rf "${TEMPLATE_DIR}/tests"/* ./tests/ 2>/dev/null || true
-        fi
-
-        # Copy configuration files from template
-        if [ -f "${TEMPLATE_DIR}/.eslintrc.cjs" ]; then
-            cp "${TEMPLATE_DIR}/.eslintrc.cjs" ./
-        fi
-
-        if [ -f "${TEMPLATE_DIR}/package.json" ]; then
-            cp "${TEMPLATE_DIR}/package.json" ./
-        fi
-
-        if [ -f "${TEMPLATE_DIR}/tsconfig.json" ]; then
-            cp "${TEMPLATE_DIR}/tsconfig.json" ./
-        fi
-
-        if [ -f "${TEMPLATE_DIR}/tsconfig.build.json" ]; then
-            cp "${TEMPLATE_DIR}/tsconfig.build.json" ./
-        fi
-
-        if [ -f "${TEMPLATE_DIR}/rollup.config.js" ]; then
-            cp "${TEMPLATE_DIR}/rollup.config.js" ./
-        fi
-
-        echo "   ✅ Template files copied successfully"
-
-        # Then replace template variables
-        echo "   🔄 Replacing template variables..."
-
-        # Convert display name to PascalCase for proper naming
-        display_name_pascal=$(echo "${display_name}" | sed 's/[^a-zA-Z0-9]//g')
-        package_name_kebab=$(echo "${package_name}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
-
-        # Replace template variables in all relevant files
-        find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" -o -name ".*" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec sed -i.bak \
-            -e "s/{{PACKAGE_NAME}}/${package_name_kebab}/g" \
-            -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
-            -e "s|{{PACKAGE_DESCRIPTION}}|${description}|g" \
-            -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
-            -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
-            {} \; 2>/dev/null || true
-
-                # Clean up backup files
-        find . -name "*.bak" ! -path "./node_modules/*" ! -path "./.git/*" -delete 2>/dev/null || true
-
-                echo "   ✅ Template variables replaced successfully"
-        echo "   ✅ Package setup completed - template includes all necessary files"
+    # Verify that variables were replaced
+    echo "   🔍 Verifying template variable replacement..."
+    remaining_vars=$(find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{" {} \; 2>/dev/null | wc -l)
+    if [ "$remaining_vars" -eq 0 ]; then
+        echo "   ✅ All template variables replaced successfully"
+    else
+        echo "   ⚠️ Found $remaining_vars files with remaining template variables"
+        find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{" {} \; 2>/dev/null | head -5
     fi
 
         # Install dependencies
