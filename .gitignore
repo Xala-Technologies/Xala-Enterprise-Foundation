@@ -141,8 +141,7 @@ audit-report.json
 *.tmp
 *.temp
 
-# Lock files - excluded to prevent large file push issues
-pnpm-lock.yaml
+# Lock files - keep pnpm-lock.yaml for CI reproducibility
 package-lock.json
 yarn.lock
 .cursor-updates
