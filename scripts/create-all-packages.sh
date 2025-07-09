@@ -155,7 +155,15 @@ create_package() {
     else
         echo "   ❌ Template package directory not found: ../template-package"
         echo "   💡 Please ensure you're running this script from the correct directory"
-        return 1
+        # Try alternative path from foundation root
+        if [ -d "../../template-package" ]; then
+            cp -r ../../template-package/. "${repo_dir}/"
+            cd "${repo_dir}"
+            echo "   ✅ Template files copied from foundation template-package"
+        else
+            echo "   ❌ Template package directory not found in either location"
+            return 1
+        fi
     fi
 
     # Initialize git repository
@@ -212,6 +220,12 @@ content = content.replace('{{PACKAGE_DESCRIPTION}}', description)
 content = content.replace('{{GITHUB_ORG}}', github_org)
 content = content.replace('{{NSM_CLASSIFICATION}}', nsm_classification)
 
+# Also replace placeholders without braces for source files
+content = content.replace('PACKAGE_NAME', package_name)
+content = content.replace('PACKAGE_DISPLAY_NAME', display_name)
+content = content.replace('PACKAGE_DESCRIPTION', description)
+content = content.replace('NSM_CLASSIFICATION', nsm_classification)
+
 # Write to output file
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write(content)
@@ -237,6 +251,9 @@ PYTHON_EOF
                     -e "s/{{PACKAGE_DISPLAY_NAME}}/${display_name_pascal}/g" \
                     -e "s/{{GITHUB_ORG}}/${GITHUB_ORG}/g" \
                     -e "s/{{NSM_CLASSIFICATION}}/${nsm_classification}/g" \
+                    -e "s/PACKAGE_NAME/${package_name_kebab}/g" \
+                    -e "s/PACKAGE_DISPLAY_NAME/${display_name_pascal}/g" \
+                    -e "s/NSM_CLASSIFICATION/${nsm_classification}/g" \
                     "$temp_file" 2>/dev/null || true
 
                 # Handle description separately with Perl for better Unicode/special char support
@@ -272,12 +289,17 @@ PYTHON_EOF
 
     # Verify that variables were replaced
     echo "   🔍 Verifying template variable replacement..."
-    remaining_vars=$(find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{" {} \; 2>/dev/null | wc -l)
+    # Only check for actual template variables, not GitHub Actions variables
+    remaining_vars=$(find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{[A-Z_]*}}" {} \; 2>/dev/null | wc -l)
     if [ "$remaining_vars" -eq 0 ]; then
         echo "   ✅ All template variables replaced successfully"
     else
         echo "   ⚠️ Found $remaining_vars files with remaining template variables"
-        find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{" {} \; 2>/dev/null | head -5
+        # Show specific template variables that weren't replaced
+        find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -l "{{[A-Z_]*}}" {} \; 2>/dev/null | head -5
+        # Show what template variables remain
+        echo "   🔍 Remaining template variables:"
+        find . -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.md" -o -name "*.yml" \) ! -path "./node_modules/*" ! -path "./.git/*" -exec grep -o "{{[A-Z_]*}}" {} \; 2>/dev/null | sort | uniq | head -10
     fi
 
         # Install dependencies
@@ -369,12 +391,16 @@ PYTHON_EOF
     if gh repo view "${GITHUB_ORG}/${repo_name}" &> /dev/null; then
         echo "   ⚠️ Repository ${repo_name} already exists, skipping creation"
     else
-        gh repo create "${GITHUB_ORG}/${repo_name}" \
+        if ! gh repo create "${GITHUB_ORG}/${repo_name}" \
             --description="${description}" \
             --public \
-            --confirm 2>/dev/null || {
-            echo "   ⚠️ Failed to create GitHub repository, but continuing with local setup"
-        }
+            --confirm 2>/dev/null; then
+            echo "   ❌ Failed to create GitHub repository ${repo_name}"
+            echo "   💡 Check your GitHub authentication and permissions"
+            return 1
+        else
+            echo "   ✅ GitHub repository ${repo_name} created successfully"
+        fi
     fi
 
     # Commit changes (if there are any)
@@ -387,49 +413,96 @@ PYTHON_EOF
         git reset HEAD yarn.lock 2>/dev/null || true
 
         # Create commit with shorter message to avoid commitlint issues
-        git commit -m "feat: initialize ${package_name} package
+        if ! git commit -m "feat: initialize ${package_name} package
 
 - NSM Classification: ${nsm_classification}
 - Norwegian compliance enabled
 - Multi-platform support (web, mobile, desktop, API)
 - Template with TypeScript, ESLint, and Jest setup
 
-${description}" 2>&1 | tee /tmp/commit_output.log
-
-        # Check if commit was successful
-        if [ $? -ne 0 ]; then
+${description}" 2>&1 | tee /tmp/commit_output.log; then
             echo "   ❌ Commit failed! Check the output above."
             echo "   💡 This might be due to commitlint rules or git hooks."
             cat /tmp/commit_output.log
-            echo "   ⚠️ Skipping push due to commit failure"
             return 1
+        else
+            echo "   ✅ Initial commit created successfully"
         fi
 
         # Set up main branch and push
         echo "   🚀 Setting up main branch and pushing to remote repository..."
         git branch -M main
 
-        # Try to push with better error handling (macOS compatible)
-        echo "   🚀 Pushing to GitHub repository..."
-        if git push -u origin main --progress 2>&1 | tee /tmp/push_output.log; then
-            echo "   ✅ Repository created and pushed successfully"
-
-            # Verify the push was successful by checking remote
-            if git ls-remote --exit-code origin main >/dev/null 2>&1; then
-                echo "   ✅ Push verified - repository is live on GitHub"
-            else
-                echo "   ⚠️ Push may have failed - please check manually"
-            fi
-        else
-            push_result=$?
-            echo "   ❌ Push failed with exit code: $push_result"
-            echo "   📋 Push output:"
-            tail -10 /tmp/push_output.log
-            echo "   🔧 Manual push required: cd ${repo_dir} && git push -u origin main"
+        # Ensure we're authenticated and can push
+        echo "   🔐 Verifying GitHub authentication before push..."
+        if ! gh auth status &> /dev/null; then
+            echo "   ❌ GitHub authentication lost. Please run: gh auth login"
             return 1
         fi
+
+        # Try to push with better error handling
+        echo "   🚀 Pushing to GitHub repository..."
+        push_attempts=0
+        max_attempts=3
+
+        while [ $push_attempts -lt $max_attempts ]; do
+            push_attempts=$((push_attempts + 1))
+            echo "   📤 Push attempt $push_attempts/$max_attempts..."
+
+            if git push -u origin main --progress 2>&1 | tee /tmp/push_output.log; then
+                echo "   ✅ Repository pushed successfully to GitHub"
+
+                # Verify the push was successful by checking remote
+                echo "   🔍 Verifying repository is live on GitHub..."
+                sleep 2  # Give GitHub a moment to process
+
+                if git ls-remote --exit-code origin main >/dev/null 2>&1; then
+                    echo "   ✅ Push verified - repository is live on GitHub"
+
+                    # Double-check by trying to view the repo
+                    if gh repo view "${GITHUB_ORG}/${repo_name}" &> /dev/null; then
+                        echo "   ✅ GitHub repository confirmed accessible via GitHub CLI"
+                        break
+                    else
+                        echo "   ⚠️ Repository push succeeded but not immediately accessible via CLI"
+                        break
+                    fi
+                else
+                    echo "   ❌ Push verification failed - repository not accessible"
+                    if [ $push_attempts -lt $max_attempts ]; then
+                        echo "   🔄 Retrying push..."
+                        sleep 3
+                        continue
+                    fi
+                fi
+            else
+                push_result=$?
+                echo "   ❌ Push failed with exit code: $push_result"
+                echo "   📋 Push output:"
+                tail -10 /tmp/push_output.log
+
+                if [ $push_attempts -lt $max_attempts ]; then
+                    echo "   🔄 Retrying push in 3 seconds..."
+                    sleep 3
+                    continue
+                else
+                    echo "   ❌ All push attempts failed!"
+                    echo "   💡 Manual push required: cd ${repo_dir} && git push -u origin main"
+                    echo "   🔧 Or check GitHub authentication: gh auth status"
+                    return 1
+                fi
+            fi
+        done
+
+        if [ $push_attempts -eq $max_attempts ] && ! git ls-remote --exit-code origin main >/dev/null 2>&1; then
+            echo "   ❌ Failed to push to GitHub after $max_attempts attempts"
+            echo "   💡 This package was created locally but NOT published to GitHub"
+            return 1
+        fi
+
     else
-        echo "   ✅ No changes to commit"
+        echo "   ⚠️ No changes to commit - this should not happen with a new package"
+        return 1
     fi
 
     echo "   ✅ Package ${package_name} created successfully!"
@@ -551,21 +624,110 @@ main() {
     # Create packages
     local count=0
     local total=${#PACKAGE_NAMES[@]}
+    local successful_packages=()
+    local failed_packages=()
+    local github_published=()
+    local github_failed=()
 
     for i in "${!PACKAGE_NAMES[@]}"; do
         count=$((count + 1))
         echo ""
         echo "🔄 Progress: ${count}/${total}"
-        create_package "$i"
+
+        if create_package "$i"; then
+            successful_packages+=("${PACKAGE_NAMES[$i]}")
+            # Check if the package was actually published to GitHub
+            package_name="${PACKAGE_NAMES[$i]}"
+            display_name="${PACKAGE_DISPLAY_NAMES[$i]}"
+            repo_name="Xala-Enterprise-${display_name// /-}"
+
+            if gh repo view "${GITHUB_ORG}/${repo_name}" &> /dev/null; then
+                github_published+=("${package_name}")
+            else
+                github_failed+=("${package_name}")
+            fi
+        else
+            failed_packages+=("${PACKAGE_NAMES[$i]}")
+            echo "   ❌ Package ${PACKAGE_NAMES[$i]} creation failed!"
+
+            # Ask user if they want to continue or stop
+            echo ""
+            read -p "   Continue with remaining packages? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "❌ Package creation stopped by user"
+                break
+            fi
+        fi
     done
 
     # Create workspace overview
-    create_workspace_overview
+    if [ ${#successful_packages[@]} -gt 0 ]; then
+        create_workspace_overview
+    fi
 
     echo ""
-    echo "🎉 SUCCESS! All ${total} packages created successfully!"
+    echo "📊 PACKAGE CREATION SUMMARY"
+    echo "=========================="
+    echo ""
+
+    if [ ${#successful_packages[@]} -gt 0 ]; then
+        echo "✅ Successfully created packages (${#successful_packages[@]}/${total}):"
+        for pkg in "${successful_packages[@]}"; do
+            echo "   - ${pkg}"
+        done
+        echo ""
+    fi
+
+    if [ ${#failed_packages[@]} -gt 0 ]; then
+        echo "❌ Failed to create packages (${#failed_packages[@]}/${total}):"
+        for pkg in "${failed_packages[@]}"; do
+            echo "   - ${pkg}"
+        done
+        echo ""
+    fi
+
+    echo "🚀 GITHUB PUBLISHING STATUS"
+    echo "==========================="
+    echo ""
+
+    if [ ${#github_published[@]} -gt 0 ]; then
+        echo "✅ Successfully published to GitHub (${#github_published[@]} packages):"
+        for pkg in "${github_published[@]}"; do
+            echo "   - ${pkg}"
+        done
+        echo ""
+    fi
+
+    if [ ${#github_failed[@]} -gt 0 ]; then
+        echo "❌ Failed to publish to GitHub (${#github_failed[@]} packages):"
+        for pkg in "${github_failed[@]}"; do
+            echo "   - ${pkg} (exists locally only)"
+        done
+        echo ""
+        echo "💡 To manually publish failed packages:"
+        for pkg in "${github_failed[@]}"; do
+            echo "   cd ${BASE_DIR}/${pkg} && git push -u origin main"
+        done
+        echo ""
+    fi
+
+    if [ ${#github_published[@]} -eq ${#successful_packages[@]} ] && [ ${#successful_packages[@]} -eq $total ]; then
+        echo "🎉 COMPLETE SUCCESS!"
+        echo "   ✅ All ${total} packages created and published to GitHub!"
+    elif [ ${#successful_packages[@]} -eq $total ]; then
+        echo "⚠️ PARTIAL SUCCESS!"
+        echo "   ✅ All packages created locally"
+        echo "   ⚠️ Some packages not published to GitHub"
+    else
+        echo "⚠️ INCOMPLETE!"
+        echo "   ⚠️ Some packages failed to create"
+    fi
+
     echo ""
     echo "📁 Packages location: ${BASE_DIR}"
+    echo "🔗 GitHub organization: https://github.com/${GITHUB_ORG}"
+    echo ""
     echo "📋 Next steps:"
     echo "   1. Review each package's README.md for specific setup instructions"
     echo "   2. Implement package-specific functionality"
