@@ -1,0 +1,30 @@
+[
+  {
+    "id": "public_services_portal",
+    "name": "Public Services Portal",
+    "enabled": true,
+    "nsmClassification": "ÅPEN",
+    "description": "Access to public municipal services"
+  },
+  {
+    "id": "employee_management",
+    "name": "Employee Management System",
+    "enabled": true,
+    "nsmClassification": "BEGRENSET",
+    "description": "Access to employee records and management"
+  },
+  {
+    "id": "health_records_system",
+    "name": "Health Records Management",
+    "enabled": true,
+    "nsmClassification": "KONFIDENSIELT",
+    "description": "Access to citizen health records"
+  },
+  {
+    "id": "classified_intelligence",
+    "name": "Classified Intelligence System",
+    "enabled": true,
+    "nsmClassification": "HEMMELIG",
+    "description": "Access to classified intelligence data"
+  }
+]

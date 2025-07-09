@@ -1,0 +1,35 @@
+{
+  "nb": {
+    "error.general": "En feil oppstod",
+    "error.validation": "Valideringsfeil",
+    "error.permission": "Tilgangsfeil",
+    "municipality.services": "Kommunale tjenester",
+    "citizen.portal": "Innbyggerportal",
+    "form.submit": "Send inn",
+    "accessibility.skip_to_content": "Hopp til innhold",
+    "accessibility.menu": "Meny",
+    "accessibility.search": "Søk"
+  },
+  "nn": {
+    "error.general": "Ein feil oppstod",
+    "error.validation": "Valideringsfeil",
+    "error.permission": "Tilgangsfeil",
+    "municipality.services": "Kommunale tenester",
+    "citizen.portal": "Innbyggjarportal",
+    "form.submit": "Send inn",
+    "accessibility.skip_to_content": "Hopp til innhald",
+    "accessibility.menu": "Meny",
+    "accessibility.search": "Søk"
+  },
+  "en": {
+    "error.general": "An error occurred",
+    "error.validation": "Validation error",
+    "error.permission": "Permission error",
+    "municipality.services": "Municipal services",
+    "citizen.portal": "Citizen portal",
+    "form.submit": "Submit",
+    "accessibility.skip_to_content": "Skip to content",
+    "accessibility.menu": "Menu",
+    "accessibility.search": "Search"
+  }
+}

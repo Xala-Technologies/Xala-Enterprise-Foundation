@@ -1,0 +1,53 @@
+[
+  {
+    "userId": "citizen_001",
+    "name": "Ola Nordmann",
+    "roles": [
+      "citizen"
+    ],
+    "clearanceLevel": "ÅPEN",
+    "municipality": "0301",
+    "language": "nb"
+  },
+  {
+    "userId": "employee_001",
+    "name": "Kari Ansatt",
+    "roles": [
+      "municipal_employee"
+    ],
+    "clearanceLevel": "BEGRENSET",
+    "municipality": "0301",
+    "language": "nb"
+  },
+  {
+    "userId": "doctor_001",
+    "name": "Dr. Erik Lege",
+    "roles": [
+      "healthcare_professional",
+      "doctor"
+    ],
+    "clearanceLevel": "KONFIDENSIELT",
+    "municipality": "0301",
+    "language": "nb",
+    "additionalValidation": {
+      "licenseNumber": "NO-DOC-12345",
+      "department": "cardiology"
+    }
+  },
+  {
+    "userId": "security_officer_001",
+    "name": "Siri Sikkerhet",
+    "roles": [
+      "security_officer",
+      "intelligence_analyst"
+    ],
+    "clearanceLevel": "HEMMELIG",
+    "municipality": "0301",
+    "language": "nb",
+    "securityClearance": {
+      "level": "HEMMELIG",
+      "validUntil": "2026-07-09T09:15:40.500Z",
+      "backgroundCheckPassed": true
+    }
+  }
+]

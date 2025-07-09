@@ -71,6 +71,7 @@ export class SagaOrchestrator {
   private runningExecutions: Map<string, SagaExecution> = new Map();
   private completedExecutions: SagaExecution[] = [];
   private options: SagaOrchestratorOptions;
+  private timeouts: Set<NodeJS.Timeout> = new Set(); // Track timeouts for cleanup
 
   constructor(options: SagaOrchestratorOptions = {}) {
     this.options = {
@@ -304,11 +305,22 @@ export class SagaOrchestrator {
 
   // Execute with timeout
   private async executeWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
+    let timeoutId: NodeJS.Timeout;
+
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Step execution timeout')), timeout);
+      timeoutId = setTimeout(() => reject(new Error('Step execution timeout')), timeout);
+      this.timeouts.add(timeoutId);
     });
 
-    return Promise.race([promise, timeoutPromise]);
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      // Clear the specific timeout when promise resolves/rejects
+      if (timeoutId!) {
+        clearTimeout(timeoutId);
+        this.timeouts.delete(timeoutId);
+      }
+    }
   }
 
   // Calculate retry delay
@@ -435,6 +447,21 @@ export class SagaOrchestrator {
     const initialCount = this.completedExecutions.length;
     this.completedExecutions = this.completedExecutions.filter(e => e.startTime >= olderThan);
     return initialCount - this.completedExecutions.length;
+  }
+
+  /**
+   * Clean up all active timeouts and resources
+   * Should be called in tests or when shutting down
+   */
+  public cleanup(): void {
+    // Clear all active timeouts
+    for (const timeoutId of this.timeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.timeouts.clear();
+
+    // Clear all active sagas
+    this.runningExecutions.clear();
   }
 }
 

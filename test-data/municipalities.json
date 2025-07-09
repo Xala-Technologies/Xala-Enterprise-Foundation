@@ -1,0 +1,27 @@
+[
+  {
+    "code": "0301",
+    "name": "Oslo",
+    "county": "Oslo"
+  },
+  {
+    "code": "4601",
+    "name": "Bergen",
+    "county": "Vestland"
+  },
+  {
+    "code": "5001",
+    "name": "Trondheim",
+    "county": "Trøndelag"
+  },
+  {
+    "code": "1103",
+    "name": "Stavanger",
+    "county": "Rogaland"
+  },
+  {
+    "code": "1601",
+    "name": "Tromsø",
+    "county": "Troms og Finnmark"
+  }
+]

@@ -4,7 +4,6 @@
  */
 
 import { BaseEvent, EventBus, getEventBus } from '../event-core';
-import { createLogger } from '../logger';
 
 export interface PublishOptions {
   delay?: number;
@@ -32,7 +31,7 @@ export class EventPublisher {
   private scheduledEvents: ScheduledEvent[] = [];
   private batchBuffer: Map<string, BaseEvent[]> = new Map();
   private flushTimer?: NodeJS.Timeout;
-  private logger = createLogger({ level: 'info' });
+  private scheduledTimeouts: Set<NodeJS.Timeout> = new Set(); // Track scheduled timeouts for cleanup
 
   constructor(eventBus?: EventBus) {
     this.eventBus = eventBus || getEventBus();
@@ -42,9 +41,7 @@ export class EventPublisher {
    * Initialize the event publisher
    */
   async initialize(): Promise<void> {
-    this.logger.info('🚀 Initializing Event Publisher...');
     // Initialize any resources if needed
-    this.logger.info('✅ Event Publisher initialized successfully');
   }
 
   // Publish single event with options
@@ -204,14 +201,19 @@ export class EventPublisher {
       return;
     }
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       this.publishNow(scheduledEvent.event);
       // Remove from scheduled events
       const index = this.scheduledEvents.indexOf(scheduledEvent);
       if (index > -1) {
         this.scheduledEvents.splice(index, 1);
       }
+      // Remove timeout from tracking
+      this.scheduledTimeouts.delete(timeoutId);
     }, delay);
+
+    // Track timeout for cleanup
+    this.scheduledTimeouts.add(timeoutId);
   }
 
   // Publish event immediately
@@ -229,6 +231,33 @@ export class EventPublisher {
         Array.from(this.batchBuffer.entries()).map(([id, events]) => [id, events.length])
       ),
     };
+  }
+
+  /**
+   * Clean up all scheduled timeouts and queues
+   * Should be called in tests or when shutting down
+   */
+  public cleanup(): void {
+    // Clear all scheduled timeouts
+    for (const timeoutId of this.scheduledTimeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.scheduledTimeouts.clear();
+
+    // Clear all scheduled events
+    this.scheduledEvents = [];
+
+    // Clear event queue
+    this.eventQueue = [];
+
+    // Clear batch buffer
+    this.batchBuffer.clear();
+
+    // Clear flush timer
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = undefined;
+    }
   }
 }
 

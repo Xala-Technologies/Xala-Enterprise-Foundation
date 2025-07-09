@@ -3,20 +3,27 @@
  * Tests real-world scenarios for Norwegian government-compliant event publishing
  */
 
+import { createEvent, createEventBus, EventBus } from '../../event-core';
 import {
+  createEventPublisher,
   EventPublisher,
   getEventPublisher,
-  createEventPublisher,
   publishEvent,
   scheduleEvent,
 } from '../index';
-import { createEvent } from '../../event-core';
 
 describe('Event Publisher User Stories', () => {
-  let publisher: EventPublisher;
+  let eventPublisher: EventPublisher;
+  let eventBus: EventBus;
 
   beforeEach(() => {
-    publisher = createEventPublisher();
+    eventBus = createEventBus();
+    eventPublisher = createEventPublisher(eventBus);
+  });
+
+  afterEach(() => {
+    // Clean up timeouts and resources after each test
+    eventPublisher.cleanup();
   });
 
   // User Story 1: Municipality publishes citizen registration event
@@ -35,13 +42,13 @@ describe('Event Publisher User Stories', () => {
     );
 
     // When: Municipality publishes the event
-    await publisher.publish(citizenEvent, {
+    await eventPublisher.publish(citizenEvent, {
       validateCompliance: true,
       priority: 'high',
     });
 
     // Then: Event should be published successfully (check basic stats)
-    const stats = publisher.getStats();
+    const stats = eventPublisher.getStats();
     expect(stats.queuedEvents).toBe(0); // Should be processed immediately
     expect(stats.activeBatches).toBe(0);
   });
@@ -61,13 +68,13 @@ describe('Event Publisher User Stories', () => {
     }
 
     // When: Tax office publishes events in batch
-    await publisher.publishBatch(events, {
+    await eventPublisher.publishBatch(events, {
       priority: 'normal',
       validateCompliance: true,
     });
 
     // Then: All events should be processed efficiently
-    const stats = publisher.getStats();
+    const stats = eventPublisher.getStats();
     expect(stats.queuedEvents).toBe(0); // All should be processed
     expect(stats.activeBatches).toBe(0);
   });
@@ -85,14 +92,14 @@ describe('Event Publisher User Stories', () => {
     const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
     // When: Service schedules reminder event
-    const eventId = publisher.scheduleEvent(reminderEvent, futureDate, {
+    const eventId = eventPublisher.scheduleEvent(reminderEvent, futureDate, {
       priority: 'normal',
       validateCompliance: true,
     });
 
     // Then: Event should be scheduled successfully
     expect(eventId).toBe(reminderEvent.id);
-    const stats = publisher.getStats();
+    const stats = eventPublisher.getStats();
     expect(stats.scheduledEvents).toBe(1);
   });
 
@@ -102,7 +109,7 @@ describe('Event Publisher User Stories', () => {
     const batchId = 'portal_events_batch';
 
     // When: Portal starts batching events
-    publisher.startBatch(batchId, {
+    eventPublisher.startBatch(batchId, {
       maxBatchSize: 5,
       flushInterval: 1000,
       enableCompression: true,
@@ -116,23 +123,23 @@ describe('Event Publisher User Stories', () => {
         timestamp: new Date(),
       });
 
-      await publisher.publish(event, { batchId });
+      await eventPublisher.publish(event, { batchId });
     }
 
     // Check that events are batched
-    let stats = publisher.getStats();
+    let stats = eventPublisher.getStats();
     expect(stats.activeBatches).toBe(1);
     expect(stats.batchSizes[batchId]).toBe(3);
 
     // Manually flush the batch
-    await publisher.flushBatch(batchId);
+    await eventPublisher.flushBatch(batchId);
 
     // Then: Events should be processed and batch should be empty
-    stats = publisher.getStats();
+    stats = eventPublisher.getStats();
     expect(stats.batchSizes[batchId]).toBe(0);
 
     // Clean up
-    await publisher.stopBatch(batchId);
+    await eventPublisher.stopBatch(batchId);
   });
 
   // User Story 5: Compliance validation for classified events
@@ -151,13 +158,13 @@ describe('Event Publisher User Stories', () => {
     );
 
     // When: Service publishes classified event with validation
-    await publisher.publish(classifiedEvent, {
+    await eventPublisher.publish(classifiedEvent, {
       validateCompliance: true,
       priority: 'high',
     });
 
     // Then: Event should be published successfully without errors
-    const stats = publisher.getStats();
+    const stats = eventPublisher.getStats();
     expect(stats.queuedEvents).toBe(0); // Should be processed immediately
   });
 
@@ -172,9 +179,9 @@ describe('Event Publisher User Stories', () => {
 
     // When: Service attempts to publish invalid event
     // Then: Should throw validation error
-    await expect(publisher.publish(invalidEvent, { validateCompliance: true })).rejects.toThrow(
-      'Invalid NSM classification: INVALID_LEVEL'
-    );
+    await expect(
+      eventPublisher.publish(invalidEvent, { validateCompliance: true })
+    ).rejects.toThrow('Invalid NSM classification: INVALID_LEVEL');
   });
 
   // User Story 7: Global event publisher functions

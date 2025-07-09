@@ -6,39 +6,35 @@
 import {
   HealthManager,
   createHealthManager,
-  getHealthManager,
+  getOverallHealth,
   registerHealthCheck,
   runHealthCheck,
-  getOverallHealth,
 } from '../index';
 
 describe('Health Check User Stories', () => {
-  let health: HealthManager;
+  let healthManager: HealthManager;
 
   beforeEach(() => {
-    health = createHealthManager({
+    healthManager = createHealthManager({
       enableCompliance: true,
-      enableAutoCheck: false, // Disable for tests
-      checkInterval: 30000,
-      timeout: 5000,
+      enableAutoCheck: false, // Disable auto-check for tests
+      timeout: 1000,
     });
   });
 
   afterEach(() => {
-    health.stopAutoChecks();
-    // Clear global manager state
-    const globalManager = getHealthManager();
-    globalManager.stopAutoChecks();
+    // Clean up timeouts and resources after each test
+    healthManager.cleanup();
   });
 
   // User Story 1: Operations team monitoring critical infrastructure
   it('Operations Team Story: should monitor critical infrastructure across Oslo Kommune', async () => {
     // Given: Operations team needs to monitor critical municipal services
-    health.registerInfrastructureChecks();
+    healthManager.registerInfrastructureChecks();
 
     // When: Infrastructure health checks are run
-    const results = await health.runAllChecks();
-    const overallHealth = health.getOverallHealth();
+    const results = await healthManager.runAllChecks();
+    const overallHealth = healthManager.getOverallHealth();
 
     // Then: All critical infrastructure should be monitored
     expect(results.database).toBeDefined();
@@ -60,7 +56,7 @@ describe('Health Check User Stories', () => {
         overallHealth.summary.unhealthy
     ).toBe(overallHealth.summary.total);
 
-    const stats = health.getStats();
+    const stats = healthManager.getStats();
     expect(stats.totalChecks).toBeGreaterThan(0);
     expect(stats.complianceEnabled).toBe(true);
   });
@@ -68,10 +64,10 @@ describe('Health Check User Stories', () => {
   // User Story 2: Compliance officer monitoring Norwegian standards
   it('Compliance Officer Story: should monitor Norwegian compliance standards', async () => {
     // Given: Compliance officer needs to track NSM, GDPR, and DigDir compliance
-    health.registerComplianceChecks();
+    healthManager.registerComplianceChecks();
 
     // When: Compliance checks are executed
-    const results = await health.runAllChecks();
+    const results = await healthManager.runAllChecks();
 
     // Then: All compliance standards should be monitored
     expect(results.nsm_compliance).toBeDefined();
@@ -97,7 +93,7 @@ describe('Health Check User Stories', () => {
     expect(['healthy', 'degraded', 'unhealthy']).toContain(digdirResult.status);
     expect(digdirResult.message).toContain('DigDir');
 
-    const stats = health.getStats();
+    const stats = healthManager.getStats();
     expect(stats.totalChecks).toBe(3); // NSM, GDPR, DigDir
     expect(stats.complianceEnabled).toBe(true);
   });
@@ -107,7 +103,7 @@ describe('Health Check User Stories', () => {
     // Given: Trondheim Kommune needs to monitor custom services
 
     // Register custom municipal service checks
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'citizen_portal',
       check: async () => ({
         name: 'citizen_portal',
@@ -121,7 +117,7 @@ describe('Health Check User Stories', () => {
       tags: ['municipal', 'citizen_services'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'booking_system',
       check: async () => ({
         name: 'booking_system',
@@ -135,7 +131,7 @@ describe('Health Check User Stories', () => {
       tags: ['municipal', 'booking'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'payment_gateway',
       check: async () => ({
         name: 'payment_gateway',
@@ -150,8 +146,8 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Municipal services are checked
-    const results = await health.runAllChecks();
-    const overallHealth = health.getOverallHealth();
+    const results = await healthManager.runAllChecks();
+    const overallHealth = healthManager.getOverallHealth();
 
     // Then: All municipal services should be monitored with proper status
     expect(results.citizen_portal.status).toBe('healthy');
@@ -175,7 +171,7 @@ describe('Health Check User Stories', () => {
     // Given: Developer needs to debug a failing service
 
     // Register a failing service check
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'user_authentication',
       check: async () => {
         throw new Error('Connection timeout to authentication service');
@@ -186,7 +182,7 @@ describe('Health Check User Stories', () => {
     });
 
     // Register a slow service check
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'document_storage',
       check: async () => {
         // Simulate slow response
@@ -210,9 +206,9 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Developer runs health checks for debugging
-    const authResult = await health.runCheck('user_authentication');
-    const storageResult = await health.runCheck('document_storage');
-    const overallHealth = health.getOverallHealth();
+    const authResult = await healthManager.runCheck('user_authentication');
+    const storageResult = await healthManager.runCheck('document_storage');
+    const overallHealth = healthManager.getOverallHealth();
 
     // Then: Detailed diagnostic information should be available
     expect(authResult.status).toBe('unhealthy');
@@ -230,7 +226,7 @@ describe('Health Check User Stories', () => {
     expect(overallHealth.summary.unhealthy).toBe(1);
     expect(overallHealth.summary.healthy).toBe(1);
 
-    const stats = health.getStats();
+    const stats = healthManager.getStats();
     expect(stats.totalChecks).toBe(2);
     expect(stats.lastResults).toBe(2);
   });
@@ -240,7 +236,7 @@ describe('Health Check User Stories', () => {
     // Given: Security officer needs to monitor classified systems
 
     // Register classified system checks
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'classified_database',
       check: async () => ({
         name: 'classified_database',
@@ -259,7 +255,7 @@ describe('Health Check User Stories', () => {
       tags: ['classified', 'database', 'nsm'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'security_monitoring',
       check: async () => ({
         name: 'security_monitoring',
@@ -278,7 +274,7 @@ describe('Health Check User Stories', () => {
       tags: ['security', 'monitoring', 'nsm'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'public_api',
       check: async () => ({
         name: 'public_api',
@@ -297,7 +293,7 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Security systems are monitored
-    const results = await health.runAllChecks();
+    const results = await healthManager.runAllChecks();
 
     // Then: NSM classifications should be properly tracked
     expect(results.classified_database.nsmClassification).toBe('HEMMELIG');
@@ -311,7 +307,7 @@ describe('Health Check User Stories', () => {
     expect(results.public_api.metadata?.requestsPerMinute).toBe(450);
 
     // All systems should be healthy
-    const overallHealth = health.getOverallHealth();
+    const overallHealth = healthManager.getOverallHealth();
     expect(overallHealth.status).toBe('healthy');
     expect(overallHealth.summary.healthy).toBe(3);
     expect(overallHealth.summary.unhealthy).toBe(0);
@@ -322,7 +318,7 @@ describe('Health Check User Stories', () => {
     // Given: Operations center monitors multiple services with different criticality
 
     // Register mixed health scenario
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'critical_payment_service',
       check: async () => ({
         name: 'critical_payment_service',
@@ -336,7 +332,7 @@ describe('Health Check User Stories', () => {
       tags: ['payments', 'critical'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'backup_notification_service',
       check: async () => ({
         name: 'backup_notification_service',
@@ -350,7 +346,7 @@ describe('Health Check User Stories', () => {
       tags: ['notifications', 'non_critical'],
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'reporting_service',
       check: async () => ({
         name: 'reporting_service',
@@ -365,8 +361,8 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Operations center checks system health
-    const results = await health.runAllChecks();
-    const overallHealth = health.getOverallHealth();
+    const results = await healthManager.runAllChecks();
+    const overallHealth = healthManager.getOverallHealth();
 
     // Then: System should be categorized as unhealthy due to critical service failure
     expect(overallHealth.status).toBe('unhealthy');
@@ -419,7 +415,7 @@ describe('Health Check User Stories', () => {
   // Test error handling and timeouts
   it('should handle check timeouts and errors gracefully', async () => {
     // Given: Health check that times out
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'timeout_service',
       check: async () => {
         // Simulate a hanging service
@@ -438,7 +434,7 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Timeout check is run
-    const result = await health.runCheck('timeout_service');
+    const result = await healthManager.runCheck('timeout_service');
 
     // Then: Timeout should be handled gracefully
     expect(result.status).toBe('unhealthy');
@@ -449,7 +445,7 @@ describe('Health Check User Stories', () => {
   // Test check registration and management
   it('should manage health check registration and unregistration', () => {
     // Given: Health manager with some checks
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'test_service_1',
       check: async () => ({
         name: 'test_service_1',
@@ -460,7 +456,7 @@ describe('Health Check User Stories', () => {
       }),
     });
 
-    health.registerCheck({
+    healthManager.registerCheck({
       name: 'test_service_2',
       check: async () => ({
         name: 'test_service_2',
@@ -472,20 +468,20 @@ describe('Health Check User Stories', () => {
     });
 
     // When: Checks are registered and unregistered
-    let stats = health.getStats();
+    let stats = healthManager.getStats();
     expect(stats.totalChecks).toBe(2);
 
-    const removed = health.unregisterCheck('test_service_1');
+    const removed = healthManager.unregisterCheck('test_service_1');
     expect(removed).toBe(true);
 
-    stats = health.getStats();
+    stats = healthManager.getStats();
     expect(stats.totalChecks).toBe(1);
 
     // Attempting to remove non-existent check
-    const notRemoved = health.unregisterCheck('non_existent_service');
+    const notRemoved = healthManager.unregisterCheck('non_existent_service');
     expect(notRemoved).toBe(false);
 
-    stats = health.getStats();
+    stats = healthManager.getStats();
     expect(stats.totalChecks).toBe(1);
   });
 });

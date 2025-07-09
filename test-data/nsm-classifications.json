@@ -1,0 +1,34 @@
+{
+  "ÅPEN": {
+    "level": "ÅPEN",
+    "description": "Public information",
+    "encryptionRequired": false,
+    "accessControlRequired": false,
+    "auditTrailRequired": false,
+    "securityClearanceRequired": false
+  },
+  "BEGRENSET": {
+    "level": "BEGRENSET",
+    "description": "Restricted information",
+    "encryptionRequired": true,
+    "accessControlRequired": true,
+    "auditTrailRequired": true,
+    "securityClearanceRequired": false
+  },
+  "KONFIDENSIELT": {
+    "level": "KONFIDENSIELT",
+    "description": "Confidential information",
+    "encryptionRequired": true,
+    "accessControlRequired": true,
+    "auditTrailRequired": true,
+    "securityClearanceRequired": false
+  },
+  "HEMMELIG": {
+    "level": "HEMMELIG",
+    "description": "Secret information",
+    "encryptionRequired": true,
+    "accessControlRequired": true,
+    "auditTrailRequired": true,
+    "securityClearanceRequired": true
+  }
+}

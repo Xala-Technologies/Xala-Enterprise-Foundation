@@ -189,7 +189,7 @@ jobs:
       - name: 🧪 Test Suite
         run: |
           echo "🇳🇴 Running Norwegian compliance test suite..."
-          pnpm run test:ci
+          pnpm run test:ci --forceExit --detectOpenHandles
 
   # Job 5: Build & Deployment Validation
   build-validation:

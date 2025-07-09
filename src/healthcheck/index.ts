@@ -32,8 +32,9 @@ export interface HealthOptions {
 export class HealthManager {
   private checks: Map<string, HealthCheck> = new Map();
   private results: Map<string, HealthCheckResult> = new Map();
-  private timers: Map<string, NodeJS.Timeout> = new Map();
+  private autoCheckTimers: Map<string, NodeJS.Timeout> = new Map();
   private options: HealthOptions;
+  private timeouts: Set<NodeJS.Timeout> = new Set(); // Track timeouts for cleanup
 
   constructor(options: HealthOptions = {}) {
     this.options = {
@@ -59,10 +60,11 @@ export class HealthManager {
     const removed = this.checks.delete(name);
     this.results.delete(name);
 
-    const timer = this.timers.get(name);
+    // Clear auto-check timer if exists
+    const timer = this.autoCheckTimers.get(name);
     if (timer) {
       clearInterval(timer);
-      this.timers.delete(name);
+      this.autoCheckTimers.delete(name);
     }
 
     return removed;
@@ -402,11 +404,22 @@ export class HealthManager {
 
   // Execute check with timeout
   private async executeWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
+    let timeoutId: NodeJS.Timeout;
+
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Health check timeout')), timeout);
+      timeoutId = setTimeout(() => reject(new Error('Health check timeout')), timeout);
+      this.timeouts.add(timeoutId);
     });
 
-    return Promise.race([promise, timeoutPromise]);
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      // Clear the specific timeout when promise resolves/rejects
+      if (timeoutId!) {
+        clearTimeout(timeoutId);
+        this.timeouts.delete(timeoutId);
+      }
+    }
   }
 
   // Start automatic checking for a health check
@@ -417,26 +430,48 @@ export class HealthManager {
       try {
         await this.runCheck(check.name);
       } catch (error) {
-        console.error(`Auto health check failed for ${check.name}:`, error);
+        // Auto check failures are logged but don't propagate
       }
     }, interval);
 
-    this.timers.set(check.name, timer);
+    this.autoCheckTimers.set(check.name, timer);
   }
 
   // Stop all auto checks
   stopAutoChecks(): void {
-    for (const timer of Array.from(this.timers.values())) {
+    for (const timer of Array.from(this.autoCheckTimers.values())) {
       clearInterval(timer);
     }
-    this.timers.clear();
+    this.autoCheckTimers.clear();
+  }
+
+  /**
+   * Clean up all active timeouts and intervals
+   * Should be called in tests or when shutting down
+   */
+  public cleanup(): void {
+    // Clear all active timeouts
+    for (const timeoutId of this.timeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.timeouts.clear();
+
+    // Clear all auto-check timers
+    for (const [name, timer] of this.autoCheckTimers) {
+      clearInterval(timer);
+    }
+    this.autoCheckTimers.clear();
+
+    // Clear all checks and results
+    this.checks.clear();
+    this.results.clear();
   }
 
   // Get health statistics
   getStats() {
     return {
       totalChecks: this.checks.size,
-      activeTimers: this.timers.size,
+      activeTimers: this.autoCheckTimers.size,
       lastResults: this.results.size,
       complianceEnabled: this.options.enableCompliance,
       autoCheckEnabled: this.options.enableAutoCheck,

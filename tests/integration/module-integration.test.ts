@@ -41,7 +41,10 @@ describe('Foundation Module Integration Tests', () => {
   });
 
   afterEach(() => {
-    // Clean up resources - most modules don't need explicit cleanup
+    // Clean up all resources after each test
+    healthCheck.cleanup();
+    saga.cleanup();
+    eventPublisher.cleanup();
   });
 
   describe('Logger Integration', () => {

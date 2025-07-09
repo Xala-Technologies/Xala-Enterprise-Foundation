@@ -3,13 +3,7 @@
  * Tests real-world scenarios for Norwegian government complex workflow management
  */
 
-import {
-  SagaContext,
-  SagaDefinition,
-  SagaOrchestrator,
-  createSagaOrchestrator,
-  getSagaOrchestrator,
-} from '../index';
+import { SagaContext, SagaDefinition, SagaOrchestrator, createSagaOrchestrator } from '../index';
 
 describe('Saga Orchestrator User Stories', () => {
   let orchestrator: SagaOrchestrator;
@@ -18,15 +12,13 @@ describe('Saga Orchestrator User Stories', () => {
     orchestrator = createSagaOrchestrator({
       enableAuditLogging: true,
       enableCompliance: true,
-      defaultTimeout: 5000,
-      maxConcurrentSagas: 10,
+      defaultTimeout: 1000,
     });
   });
 
   afterEach(() => {
-    // Clean up global orchestrator
-    const globalOrchestrator = getSagaOrchestrator();
-    globalOrchestrator.cleanupOldExecutions(new Date());
+    // Clean up timeouts and resources after each test
+    orchestrator.cleanup();
   });
 
   // User Story 1: Oslo Kommune citizen onboarding workflow
