@@ -148,7 +148,8 @@ create_package() {
 
     # Copy template files from local template-package directory
     if [ -d "../template-package" ]; then
-        cp -r ../template-package/* "${repo_dir}/"
+        # Copy all files including hidden ones (.github, .gitignore, etc.)
+        cp -r ../template-package/. "${repo_dir}/"
         cd "${repo_dir}"
         echo "   ✅ Template files copied from local template-package"
     else
