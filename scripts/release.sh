@@ -71,23 +71,23 @@ print_usage() {
 
 check_dependencies() {
     log_info "Checking dependencies..."
-    
+
     # Check if we're in the right directory
     if [ ! -f "package.json" ]; then
         log_error "package.json not found. Please run this script from the project root."
     fi
-    
+
     # Check if this is the foundation package
-    CURRENT_PACKAGE=$(node -p "require('./package.json').name" 2>/dev/null || echo "")
+    CURRENT_PACKAGE=$(pnpm exec node -p "require('./package.json').name" 2>/dev/null || echo "")
     if [ "$CURRENT_PACKAGE" != "$PACKAGE_NAME" ]; then
         log_error "This script is for $PACKAGE_NAME but found: $CURRENT_PACKAGE"
     fi
-    
+
     # Check required tools
     command -v node >/dev/null 2>&1 || log_error "Node.js is required but not installed."
     command -v pnpm >/dev/null 2>&1 || log_error "pnpm is required but not installed."
     command -v git >/dev/null 2>&1 || log_error "git is required but not installed."
-    
+
     log_success "All dependencies are available"
 }
 
@@ -96,14 +96,14 @@ check_git_status() {
         log_warning "Skipping git status check"
         return
     fi
-    
+
     log_info "Checking git status..."
-    
+
     # Check if we're in a git repository
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         log_error "Not in a git repository"
     fi
-    
+
     # Check current branch
     CURRENT_BRANCH=$(git branch --show-current)
     if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
@@ -114,33 +114,33 @@ check_git_status() {
             log_error "Aborted by user"
         fi
     fi
-    
+
     # Check for uncommitted changes
     if [ -n "$(git status --porcelain)" ]; then
         log_error "Working directory is not clean. Please commit or stash your changes."
     fi
-    
+
     # Check if we're up to date with remote
     git fetch origin
     if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/$DEFAULT_BRANCH)" ]; then
         log_error "Local branch is not up to date with origin/$DEFAULT_BRANCH"
     fi
-    
+
     log_success "Git status is clean"
 }
 
 get_current_version() {
-    node -p "require('./package.json').version"
+    pnpm exec node -p "require('./package.json').version"
 }
 
 calculate_new_version() {
     local version_type="$1"
     local current_version=$(get_current_version)
-    
+
     case $version_type in
         patch|minor|major)
-            # Use npm version to calculate new version
-            NEW_VERSION=$(npm version $version_type --no-git-tag-version --dry-run | sed 's/^v//')
+            # Use pnpm version to calculate new version
+            NEW_VERSION=$(pnpm version $version_type --no-git-tag-version --dry-run | sed 's/^v//')
             ;;
         *)
             # Assume it's a specific version
@@ -151,27 +151,27 @@ calculate_new_version() {
             fi
             ;;
     esac
-    
+
     echo "$NEW_VERSION"
 }
 
 update_package_version() {
     local new_version="$1"
     log_info "Updating package.json version to $new_version..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would update package.json version to $new_version"
         return
     fi
-    
+
     # Update package.json
-    node -e "
+    pnpm exec node -e "
         const fs = require('fs');
         const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
         pkg.version = '$new_version';
         fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
     "
-    
+
     log_success "Updated package.json version"
 }
 
@@ -180,14 +180,14 @@ run_tests() {
         log_warning "Skipping tests"
         return
     fi
-    
+
     log_info "Running tests..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would run tests"
         return
     fi
-    
+
     pnpm run validate || log_error "Tests failed"
     log_success "All tests passed"
 }
@@ -197,35 +197,35 @@ build_package() {
         log_warning "Skipping build"
         return
     fi
-    
+
     log_info "Building package..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would build package"
         return
     fi
-    
+
     # Clean previous build
     pnpm run clean || true
-    
+
     # Build package
     pnpm run build || log_error "Build failed"
-    
+
     # Validate build output
     if [ ! -f "dist/index.js" ] || [ ! -f "dist/index.d.ts" ]; then
         log_error "Build output is incomplete"
     fi
-    
+
     # Test Norwegian compliance features
     log_info "Validating Norwegian compliance features..."
-    node -e "
+    pnpm exec node -e "
         const foundation = require('./dist/index.js');
-        if (!foundation.EventBus || !foundation.NorwegianComplianceEvents) {
+        if (!foundation.EventBus || !foundation.NORWEGIAN_COMPLIANCE) {
             throw new Error('Critical foundation features missing from build');
         }
         console.log('✅ Norwegian compliance features validated');
     " || log_error "Norwegian compliance validation failed"
-    
+
     log_success "Package built successfully"
 }
 
@@ -234,18 +234,18 @@ generate_changelog() {
         log_warning "Skipping changelog generation"
         return
     fi
-    
+
     local new_version="$1"
     log_info "Generating changelog for version $new_version..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would generate changelog"
         return
     fi
-    
+
     # Get the last tag
     LAST_TAG=$(git tag -l --sort=-version:refname | head -n 1)
-    
+
     if [ -z "$LAST_TAG" ]; then
         log_info "No previous tags found, generating initial changelog"
         COMMIT_RANGE="HEAD"
@@ -253,26 +253,26 @@ generate_changelog() {
         log_info "Generating changelog since $LAST_TAG"
         COMMIT_RANGE="$LAST_TAG..HEAD"
     fi
-    
+
     # Create changelog entry
     DATE=$(date +"%Y-%m-%d")
     CHANGELOG_ENTRY="## [$new_version] - $DATE\n\n"
-    
+
     # Add what's changed section
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}### What's Changed\n\n"
-    
+
     # Get commits with conventional commit format
     while IFS= read -r commit; do
         CHANGELOG_ENTRY="${CHANGELOG_ENTRY}- ${commit}\n"
     done < <(git log $COMMIT_RANGE --pretty=format:"%s" --reverse)
-    
+
     # Add Norwegian compliance section
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}\n### Norwegian Compliance\n\n"
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}This release maintains full compliance with:\n"
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}- NSM (Norwegian National Security Authority) security classifications\n"
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}- GDPR (General Data Protection Regulation)\n"
     CHANGELOG_ENTRY="${CHANGELOG_ENTRY}- DigDir (Norwegian Digitalization Agency) standards\n\n"
-    
+
     # Create or update CHANGELOG.md
     if [ ! -f "CHANGELOG.md" ]; then
         cat > CHANGELOG.md << EOF
@@ -285,27 +285,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 EOF
     fi
-    
+
     # Insert new entry after the header
     sed -i "1,/^$/a\\
 $CHANGELOG_ENTRY" CHANGELOG.md
-    
+
     log_success "Changelog generated"
 }
 
 commit_changes() {
     local new_version="$1"
     log_info "Committing changes..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would commit changes"
         return
     fi
-    
+
     # Add files to git
     git add package.json
     [ -f "CHANGELOG.md" ] && git add CHANGELOG.md
-    
+
     # Commit changes
     git commit -m "chore: release version $new_version
 
@@ -314,19 +314,19 @@ commit_changes() {
 - Norwegian compliance validation passed
 
 This release maintains compliance with NSM, GDPR, and DigDir standards."
-    
+
     log_success "Changes committed"
 }
 
 create_git_tag() {
     local new_version="$1"
     log_info "Creating git tag v$new_version..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would create git tag v$new_version"
         return
     fi
-    
+
     # Create annotated tag
     git tag -a "v$new_version" -m "Release v$new_version
 
@@ -341,7 +341,7 @@ Features:
 - Configuration management with environment-specific settings
 - Audit logging for government compliance requirements
 - TypeScript support with comprehensive type definitions"
-    
+
     if [ "$PUSH_TAGS" = "true" ]; then
         log_info "Pushing tag to remote..."
         git push origin "v$new_version"
@@ -349,7 +349,7 @@ Features:
     else
         log_info "Tag created locally. Use --push-tags to push to remote."
     fi
-    
+
     log_success "Git tag created"
 }
 
@@ -357,26 +357,26 @@ publish_package() {
     if [ "$PUBLISH" != "true" ]; then
         return
     fi
-    
+
     local new_version="$1"
     log_info "Publishing package to npm registry..."
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         log_warning "DRY RUN: Would publish package"
         pnpm pack --dry-run
         return
     fi
-    
+
     # Configure npm for GitHub Packages
     echo "@xala-technologies:registry=$REGISTRY_URL" > .npmrc.tmp
     echo "$REGISTRY_URL/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc.tmp
-    
+
     # Load environment variables from .env file if it exists and publishing is enabled
     if [ -f ".env" ]; then
         log_info "Loading environment variables from .env file..."
         export $(grep -v '^#' .env | xargs)
     fi
-    
+
     # Check if NODE_AUTH_TOKEN is set
     if [ -z "$NODE_AUTH_TOKEN" ]; then
         if [ -f ".env" ]; then
@@ -385,11 +385,11 @@ publish_package() {
             log_error "NODE_AUTH_TOKEN environment variable is required for publishing. Create a .env file with: NODE_AUTH_TOKEN=your_github_token"
         fi
     fi
-    
+
     # Use temporary .npmrc for publishing
     mv .npmrc .npmrc.backup 2>/dev/null || true
     mv .npmrc.tmp .npmrc
-    
+
     # Publish package
     pnpm publish --no-git-checks --access public || {
         # Restore original .npmrc
@@ -397,11 +397,11 @@ publish_package() {
         mv .npmrc.backup .npmrc 2>/dev/null || true
         log_error "Publishing failed"
     }
-    
+
     # Restore original .npmrc
     rm -f .npmrc
     mv .npmrc.backup .npmrc 2>/dev/null || true
-    
+
     log_success "Package published successfully!"
     log_info "Install with: pnpm add $PACKAGE_NAME@$new_version"
 }
@@ -409,7 +409,7 @@ publish_package() {
 print_summary() {
     local current_version="$1"
     local new_version="$2"
-    
+
     echo ""
     echo "========================================"
     echo "🎉 Release Summary"
@@ -419,7 +419,7 @@ print_summary() {
     echo "New version: $new_version"
     echo "Git tag: v$new_version"
     echo ""
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         echo "⚠️  This was a DRY RUN - no changes were made"
     else
@@ -503,15 +503,15 @@ fi
 # Main execution
 main() {
     log_info "Starting release process for $PACKAGE_NAME..."
-    
+
     # Get current version
     CURRENT_VERSION=$(get_current_version)
     log_info "Current version: $CURRENT_VERSION"
-    
+
     # Calculate new version
     NEW_VERSION=$(calculate_new_version "$VERSION_TYPE")
     log_info "New version: $NEW_VERSION"
-    
+
     # Confirm with user if not dry run
     if [ "$DRY_RUN" != "true" ]; then
         echo ""
@@ -522,7 +522,7 @@ main() {
             log_error "Aborted by user"
         fi
     fi
-    
+
     # Execute release steps
     check_dependencies
     check_git_status
@@ -533,10 +533,10 @@ main() {
     commit_changes "$NEW_VERSION"
     create_git_tag "$NEW_VERSION"
     publish_package "$NEW_VERSION"
-    
+
     # Print summary
     print_summary "$CURRENT_VERSION" "$NEW_VERSION"
 }
 
 # Run main function
-main 
+main

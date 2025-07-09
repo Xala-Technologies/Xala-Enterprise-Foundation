@@ -73,27 +73,27 @@ print_usage() {
 
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check if we're in the right directory
     if [ ! -f "package.json" ]; then
         log_error "package.json not found. Please run this script from the project root."
     fi
-    
+
     # Check if this is the foundation package
-    CURRENT_PACKAGE=$(node -p "require('./package.json').name" 2>/dev/null || echo "")
+    CURRENT_PACKAGE=$(pnpm exec node -p "require('./package.json').name" 2>/dev/null || echo "")
     if [ "$CURRENT_PACKAGE" != "$PACKAGE_NAME" ]; then
         log_error "This script is for $PACKAGE_NAME but found: $CURRENT_PACKAGE"
     fi
-    
+
     # Check required tools
     command -v node >/dev/null 2>&1 || log_error "Node.js is required but not installed."
     command -v pnpm >/dev/null 2>&1 || log_error "pnpm is required but not installed."
-    
+
     # Check if package is built
     if [ ! -f "dist/index.js" ] || [ ! -f "dist/index.d.ts" ]; then
         log_error "Package is not built. Please run 'pnpm run build' first."
     fi
-    
+
     # Check NODE_AUTH_TOKEN
     if [ -z "$NODE_AUTH_TOKEN" ]; then
         if [ -f ".env" ]; then
@@ -102,114 +102,114 @@ check_prerequisites() {
             log_error "NODE_AUTH_TOKEN environment variable is required. Create a .env file with: NODE_AUTH_TOKEN=your_github_token"
         fi
     fi
-    
+
     log_success "All prerequisites met"
 }
 
 validate_package() {
     log_info "Validating package..."
-    
+
     # Get package version
-    PACKAGE_VERSION=$(node -p "require('./package.json').version")
+    PACKAGE_VERSION=$(pnpm exec node -p "require('./package.json').version")
     log_info "Package version: $PACKAGE_VERSION"
-    
+
     # Validate package can be packed
     log_info "Testing package creation..."
     # Test that pack would work by checking package.json validity
-    node -e "
+    pnpm exec node -e "
         const pkg = require('./package.json');
         if (!pkg.name || !pkg.version || !pkg.main || !pkg.types) {
             throw new Error('Invalid package.json structure');
         }
         console.log('✅ Package structure valid');
     " || log_error "Package cannot be created"
-    
-    # Test Norwegian compliance features
+
+        # Test Norwegian compliance features
     log_info "Validating Norwegian compliance features..."
-    node -e "
+    pnpm exec node -e "
         const foundation = require('./dist/index.js');
-        
+
         // Test core functionality
         if (!foundation.getEventBus || !foundation.loadConfig) {
             throw new Error('Core foundation services not available');
         }
-        
+
         // Test Norwegian compliance
         if (!foundation.NORWEGIAN_COMPLIANCE) {
             throw new Error('Norwegian compliance configuration not available');
         }
-        
+
         // Test NSM classifications
         if (!foundation.NORWEGIAN_COMPLIANCE.NSM_CLASSIFICATIONS.includes('KONFIDENSIELT')) {
             throw new Error('NSM security classifications not available');
         }
-        
+
         // Test GDPR compliance
         if (!foundation.NORWEGIAN_COMPLIANCE.GDPR_LEGAL_BASIS.includes('public_task')) {
             throw new Error('GDPR legal basis not available');
         }
-        
+
         // Test logging with classification
         if (!foundation.createNSMClassifiedLog) {
             throw new Error('NSM classified logging not available');
         }
-        
+
         // Test GDPR audit logging
         if (!foundation.createGDPRAuditLog) {
             throw new Error('GDPR audit logging not available');
         }
-        
+
         console.log('✅ Norwegian compliance features validated');
     " || log_error "Norwegian compliance validation failed"
-    
+
     log_success "Package validation passed"
 }
 
 setup_npm_config() {
     log_info "Setting up npm configuration for GitHub Packages..."
-    
+
     # Backup existing .npmrc if it exists
     if [ -f ".npmrc" ]; then
         cp .npmrc .npmrc.backup
         log_info "Backed up existing .npmrc"
     fi
-    
+
     # Create .npmrc for GitHub Packages
     cat > .npmrc << EOF
 @xala-technologies:registry=$REGISTRY_URL
 $REGISTRY_URL/:_authToken=\${NODE_AUTH_TOKEN}
 EOF
-    
+
     log_success "npm configuration updated"
 }
 
 restore_npm_config() {
     log_info "Restoring npm configuration..."
-    
+
     # Remove GitHub Packages .npmrc
     rm -f .npmrc
-    
+
     # Restore backup if it exists
     if [ -f ".npmrc.backup" ]; then
         mv .npmrc.backup .npmrc
         log_info "Restored original .npmrc"
     fi
-    
+
     log_success "npm configuration restored"
 }
 
 publish_package() {
     local dry_run="$1"
-    
+
     if [ "$dry_run" = "true" ]; then
         log_info "Performing dry run..."
-        
-        # Test pack without actually creating the file
+
+                # Test pack without actually creating the file
         log_info "Simulating package creation..."
-        node -e "
+        pnpm exec node -e "
             const pkg = require('./package.json');
             const fs = require('fs');
-            
+
             // Check required files exist
             const requiredFiles = ['dist/index.js', 'dist/index.d.ts', 'README.md', 'LICENSE'];
             requiredFiles.forEach(file => {
@@ -217,31 +217,31 @@ publish_package() {
                     throw new Error(\`Required file missing: \${file}\`);
                 }
             });
-            
+
             console.log('✅ Package would be created successfully');
             console.log(\`📦 Package: \${pkg.name}@\${pkg.version}\`);
             console.log(\`📄 Files: \${pkg.files.join(', ')}\`);
         " || log_error "Package simulation failed"
-        
+
         log_success "Dry run completed successfully"
         log_info "Package would be published to: $REGISTRY_URL"
         return
     fi
-    
+
     log_info "Publishing package to GitHub Packages..."
-    
+
     # Get package details
-    PACKAGE_VERSION=$(node -p "require('./package.json').version")
-    
+    PACKAGE_VERSION=$(pnpm exec node -p "require('./package.json').version")
+
     # Publish package
-    npm publish --registry $REGISTRY_URL --access restricted || {
+    pnpm publish --registry $REGISTRY_URL --access restricted || {
         log_error "Publishing failed"
     }
-    
+
     log_success "Package published successfully!"
     log_success "Package: $PACKAGE_NAME@$PACKAGE_VERSION"
     log_success "Registry: $REGISTRY_URL"
-    
+
     echo ""
     echo "📦 Installation Instructions:"
     echo "pnpm add $PACKAGE_NAME@$PACKAGE_VERSION"
@@ -288,7 +288,7 @@ main() {
     echo "========================================"
     echo "Package: $PACKAGE_NAME"
     echo "Registry: $REGISTRY_URL"
-    
+
     if [ "$DRY_RUN" = "true" ]; then
         echo "Mode: DRY RUN"
     else
@@ -296,13 +296,13 @@ main() {
     fi
     echo "========================================"
     echo ""
-    
+
     # Execute publishing steps
     check_prerequisites
     validate_package
     setup_npm_config
     publish_package "$DRY_RUN"
-    
+
     echo ""
     echo "========================================"
     if [ "$DRY_RUN" = "true" ]; then
@@ -320,4 +320,4 @@ main() {
 }
 
 # Run main function
-main 
+main
